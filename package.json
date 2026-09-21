@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run build:theme && npm run build:admin",
+    "build:theme": "tsc -b && vite build --mode production",
+    "build:admin": "tsc -b && vite build --mode admin",
     "lint": "eslint .",
     "preview": "vite preview",
     "i18n:sync": "node ./script/i18n-sync.mjs",

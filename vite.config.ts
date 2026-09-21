@@ -49,15 +49,57 @@ function localKomariThemePlugin(): Plugin {
   };
 }
 
+// Vite's dev server only knows how to fall back to the project's default
+// `index.html` for unmatched navigations. The admin app is a second HTML
+// entry (`admin.html`), so without this, typing a deep admin URL (or any
+// full-page navigation under /admin, /terminal, /manage, /install,
+// /database-recovery) in the browser during `vite --mode admin` incorrectly
+// loads the public theme's index.html instead and 404s. Mirror the same
+// path rules the Go backend uses in production to decide which HTML to serve.
+function adminDevFallbackPlugin(): Plugin {
+  const adminPathPrefixes = ["/admin", "/terminal", "/manage", "/database-recovery"];
+  const adminExactPaths = new Set(["/install"]);
+  const isAdminPath = (pathname: string) =>
+    adminExactPaths.has(pathname) || adminPathPrefixes.some((p) => pathname.startsWith(p));
+
+  return {
+    name: "admin-dev-fallback",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url || req.method !== "GET") return next();
+        const accept = req.headers.accept || "";
+        if (!accept.includes("text/html")) return next();
+
+        const url = new URL(req.url, "http://localhost");
+        if (path.extname(url.pathname) || url.pathname === "/admin/admin.html") return next();
+        if (!isAdminPath(url.pathname)) return next();
+
+        try {
+          const htmlPath = path.resolve(__dirname, "admin.html");
+          const rawHtml = fs.readFileSync(htmlPath, "utf-8");
+          const html = await server.transformIndexHtml(url.pathname, rawHtml, req.originalUrl);
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "text/html; charset=utf-8");
+          res.end(html);
+        } catch (e) {
+          next(e as Error);
+        }
+      });
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
+  const isAdminApp = mode === "admin";
   const buildTime = new Date().toISOString();
 
   // Supports configuring BASE_URL via environment variables, defaulting to the root path.
-  const base: string = process.env.VITE_BASE_URL ? process.env.VITE_BASE_URL : '/';
+  const base: string = isAdminApp ? "/admin/" : (process.env.VITE_BASE_URL ? process.env.VITE_BASE_URL : '/');
   const baseConfig: UserConfig = {
     base: base,
     plugins: [
-      localKomariThemePlugin(),
+      ...(isAdminApp ? [adminDevFallbackPlugin()] : [localKomariThemePlugin()]),
       react(),
       tailwindcss(),
       Pages({
@@ -65,6 +107,7 @@ export default defineConfig(({ mode }) => {
         extensions: ["tsx", "jsx"],
       }),
       VitePWA({
+        disable: isAdminApp,
         registerType: "autoUpdate",
         includeAssets: ["favicon.ico", "assets/pwa-icon.webp"],
         manifest: {
@@ -124,6 +167,8 @@ export default defineConfig(({ mode }) => {
     ],
     define: {
       __BUILD_TIME__: JSON.stringify(buildTime),
+      __KOMARI_APP_KIND__: JSON.stringify(isAdminApp ? "admin" : "theme"),
+      __KOMARI_BOOTSTRAP__: JSON.stringify(!isAdminApp),
     },
       resolve: {
         alias: [
@@ -144,9 +189,12 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       assetsDir: "assets",
-      outDir: "dist",
+      // Theme archives have always exposed their public entry as dist/index.html.
+      // Keep that wire format stable; the built-in admin application lives below it.
+      outDir: isAdminApp ? "dist/admin" : "dist",
       chunkSizeWarningLimit: 800,
       rollupOptions: {
+        input: isAdminApp ? "admin.html" : "index.html",
         output: {
           // go embed ignore files start with '_'
           chunkFileNames: "assets/chunk-[name]-[hash].js",
@@ -157,7 +205,7 @@ export default defineConfig(({ mode }) => {
     },
   };
 
-  if (mode === "development") {
+  if (mode === "development" || mode === "admin") {
     const envPath = path.resolve(process.cwd(), ".env.development");
     if (fs.existsSync(envPath)) {
       const envConfig = dotenv.parse(fs.readFileSync(envPath));

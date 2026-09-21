@@ -4,12 +4,12 @@ import "./global.css";
 import "@radix-ui/themes/styles.css";
 import "./shared/i18n/config";
 import ErrorBoundary from "./shared/components/ErrorBoundary";
-import { DefaultThemeApp } from "./default-theme/App";
+import { AdminApp } from "./admin-ui/App";
 
 createRoot(document.getElementById("root")!).render(
   <ErrorBoundary>
     <StrictMode>
-      <DefaultThemeApp />
+      <AdminApp />
     </StrictMode>
   </ErrorBoundary>,
 );
