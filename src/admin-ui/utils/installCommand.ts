@@ -119,7 +119,7 @@ export function buildInstallScriptUrl(
   ghproxy: string,
 ): string {
   const scriptFile = platform === "windows" ? "install.ps1" : "install.sh";
-  let scriptUrl = `https://raw.githubusercontent.com/komari-probe/komari-probe-agent/refs/heads/main/${scriptFile}`;
+  let scriptUrl = `https://raw.githubusercontent.com/sonar-probe/sonar-agent/refs/heads/main/${scriptFile}`;
   const trimmedGhproxy = ghproxy.trim();
   if (ghproxyEnabled && trimmedGhproxy) {
     scriptUrl = scriptUrl.slice(8); // 去掉 https://
@@ -194,16 +194,16 @@ export function buildInstallCommand(
         // 通过 bind mount 持久化该文件，容器更新重建后复用同一身份，避免重复注册。
         // 注意：文件挂载要求宿主机上文件已存在，否则 Docker 会将其创建为目录。
         return (
-          `touch .komari-auto-discovery.json && ` +
-          `docker run -d --name komari-agent --restart=always ` +
-          `-v .komari-auto-discovery.json:/app/auto-discovery.json ` +
-          `ghcr.io/komari-probe/komari-probe-agent:latest ` +
+          `touch .sonar-auto-discovery.json && ` +
+          `docker run -d --name sonar-agent --restart=always ` +
+          `-v .sonar-auto-discovery.json:/app/auto-discovery.json ` +
+          `ghcr.io/sonar-probe/sonar-agent:latest ` +
           quoteShellArgs(dockerArgs)
         );
       }
       return (
-        `docker run -d --name komari-agent --restart=always ` +
-        `ghcr.io/komari-probe/komari-probe-agent:latest ` +
+        `docker run -d --name sonar-agent --restart=always ` +
+        `ghcr.io/sonar-probe/sonar-agent:latest ` +
         quoteShellArgs(dockerArgs)
       );
     }

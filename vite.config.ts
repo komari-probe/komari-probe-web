@@ -12,11 +12,12 @@ import * as path from "path";
 import dotenv from "dotenv";
 
 function localKomariThemePlugin(): Plugin {
-  const themeRequestPath = "/themes/default/komari-theme.json";
-  const localThemeFile = path.resolve(__dirname, "komari-theme.json");
+  const localSonarThemeFile = path.resolve(__dirname, "sonar-theme.json");
+  const localKomariThemeFile = path.resolve(__dirname, "komari-theme.json");
+  const localThemeFile = fs.existsSync(localSonarThemeFile) ? localSonarThemeFile : localKomariThemeFile;
 
   return {
-    name: "local-komari-theme",
+    name: "local-theme-plugin",
     apply: "serve",
     enforce: "pre",
     configureServer(server) {
@@ -24,7 +25,7 @@ function localKomariThemePlugin(): Plugin {
         if (!req.url) return next();
 
         const url = new URL(req.url, "http://localhost");
-        if (!url.pathname.endsWith(themeRequestPath)) return next();
+        if (!url.pathname.endsWith("/themes/default/sonar-theme.json") && !url.pathname.endsWith("/themes/default/komari-theme.json")) return next();
 
         fs.readFile(localThemeFile, (err, data) => {
           if (err) {
@@ -167,6 +168,8 @@ export default defineConfig(({ mode }) => {
     ],
     define: {
       __BUILD_TIME__: JSON.stringify(buildTime),
+      __SONAR_APP_KIND__: JSON.stringify(isAdminApp ? "admin" : "theme"),
+      __SONAR_BOOTSTRAP__: JSON.stringify(!isAdminApp),
       __KOMARI_APP_KIND__: JSON.stringify(isAdminApp ? "admin" : "theme"),
       __KOMARI_BOOTSTRAP__: JSON.stringify(!isAdminApp),
     },

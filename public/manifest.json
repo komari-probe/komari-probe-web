@@ -1,6 +1,6 @@
 {
-  "name": "Komari Monitor",
-  "short_name": "Komari Monitor",
+  "name": "Sonar",
+  "short_name": "Sonar",
   "description": "A simple server monitor tool",
   "start_url": "/",
   "display": "standalone",

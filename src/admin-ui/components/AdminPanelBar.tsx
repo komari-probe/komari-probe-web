@@ -108,9 +108,14 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
         return;
       }
       try {
-        const resp = await fetch(`/themes/${currentTheme}/komari-theme.json`, {
+        let resp = await fetch(`/themes/${currentTheme}/sonar-theme.json`, {
           cache: "no-cache",
         });
+        if (!resp.ok) {
+          resp = await fetch(`/themes/${currentTheme}/komari-theme.json`, {
+            cache: "no-cache",
+          });
+        }
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         if (ignore) return;
@@ -269,7 +274,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     async function loadReleases() {
       try {
         const resp = await fetch(
-          "https://api.github.com/repos/komari-probe/komari-probe/releases?per_page=100",
+          "https://api.github.com/repos/sonar-probe/sonar/releases?per_page=100",
           {
             headers: {
               Accept: "application/vnd.github+json",
@@ -437,7 +442,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
                 <TablerMenu2 />
               </IconButton>
               <a href="/" target="_blank" rel="noopener noreferrer">
-                <label className="text-xl font-bold">Komari</label>
+                <label className="text-xl font-bold">Sonar</label>
               </a>
               {updateAvailable && releasesSince.length > 0 && (
                 <Tips

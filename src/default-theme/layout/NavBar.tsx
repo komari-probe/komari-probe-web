@@ -27,7 +27,7 @@ const NavBar = () => {
             className="text-base font-bold whitespace-nowrap"
             style={{ color: "var(--accent-4)" }}
           >
-            Komari Probe
+            Sonar
           </span>
         </div>
       </div>
@@ -36,7 +36,7 @@ const NavBar = () => {
         <IconButton
           variant="soft"
           onClick={() => {
-            window.open("https://github.com/komari-probe", "_blank");
+            window.open("https://github.com/sonar-probe", "_blank");
           }}
         >
           <GitHubLogoIcon />
