@@ -51,13 +51,14 @@ interface MarketPlugin {
   url?: string;
   download: string;
   sha256: string;
+  sonar?: string;
   komari?: string;
   installable: boolean;
   source_id: string;
   source_name: string;
 }
 
-function isKomariCompatible(constraint: string | undefined, current: string) {
+function isServerCompatible(constraint: string | undefined, current: string) {
   const parse = (value: string): [number, number, number] | null => {
     const parts = value.trim().replace(/^v/, "").split(".");
     if (
@@ -402,8 +403,8 @@ export default function PluginMarketPage() {
               installedVersion &&
               isVersionNewer(plugin.version, installedVersion),
             );
-            const komariCompatible = isKomariCompatible(
-              plugin.komari,
+            const serverCompatible = isServerCompatible(
+              plugin.sonar || plugin.komari,
               currentVersion,
             );
             const canConfigure =
@@ -427,16 +428,16 @@ export default function PluginMarketPage() {
                             : t("market.installed", "Installed")}
                         </Badge>
                       )}
-                      {!isInstalled && (!plugin.installable || !komariCompatible) && (
+                      {!isInstalled && (!plugin.installable || !serverCompatible) && (
                         <Badge color="gray" variant="soft">
-                          {komariCompatible
+                          {serverCompatible
                             ? t(
                                 "market.install_unavailable",
                                 "Package unavailable",
                               )
                             : t(
                                 "plugin.market_update_required",
-                                "Komari update required",
+                                "Sonar update required",
                               )}
                         </Badge>
                       )}
@@ -454,7 +455,7 @@ export default function PluginMarketPage() {
                       {plugin.source_name}
                     </Text>
                     <Flex gap="1" wrap="wrap" justify="end">
-                      {!isInstalled && plugin.installable && komariCompatible && (
+                      {!isInstalled && plugin.installable && serverCompatible && (
                         <Button
                           size="1"
                           disabled={installing === key}
@@ -466,7 +467,7 @@ export default function PluginMarketPage() {
                             : t("plugin.market_install", "Install")}
                         </Button>
                       )}
-                      {isInstalled && plugin.installable && komariCompatible && (
+                      {isInstalled && plugin.installable && serverCompatible && (
                         <Button
                           size="1"
                           disabled={installing === key}
