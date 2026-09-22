@@ -231,23 +231,32 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     fetchVersionInfo();
   }, []);
 
-  // 规范化版本为 [major, minor, patch] 数组，忽略前缀 v 和后缀
-  function parseSemver(input?: string | null): number[] | null {
+  // 规范化版本为结构体，正确支持 prerelease 后缀判定
+  function parseSemver(input?: string | null): { major: number; minor: number; patch: number; isPrerelease: boolean } | null {
     if (!input) return null;
     const s = String(input).trim().replace(/^v/i, "");
-    const match = s.match(/^(\d+)\.(\d+)\.(\d+)/);
+    const match = s.match(/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?/);
     if (!match) return null;
-    return [Number(match[1]), Number(match[2]), Number(match[3])];
+    return {
+      major: Number(match[1]),
+      minor: Number(match[2]),
+      patch: Number(match[3]),
+      isPrerelease: Boolean(match[4]),
+    };
   }
 
   function isNewerVersion(latest?: string | null, current?: string | null) {
     const a = parseSemver(latest);
     const b = parseSemver(current);
     if (!a || !b) return false;
-    for (let i = 0; i < 3; i++) {
-      if (a[i] > b[i]) return true;
-      if (a[i] < b[i]) return false;
-    }
+    if (a.major > b.major) return true;
+    if (a.major < b.major) return false;
+    if (a.minor > b.minor) return true;
+    if (a.minor < b.minor) return false;
+    if (a.patch > b.patch) return true;
+    if (a.patch < b.patch) return false;
+    // 如果主次补丁版本号均相同，而当前版本是预发布版（如 beta.1），最新版本是正式版，则提示更新
+    if (b.isPrerelease && !a.isPrerelease) return true;
     return false;
   }
 
@@ -260,7 +269,7 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
     async function loadReleases() {
       try {
         const resp = await fetch(
-          "https://api.github.com/repos/komari-monitor/komari/releases?per_page=100",
+          "https://api.github.com/repos/komari-probe/komari-probe/releases?per_page=100",
           {
             headers: {
               Accept: "application/vnd.github+json",

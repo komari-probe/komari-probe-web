@@ -119,7 +119,7 @@ export function buildInstallScriptUrl(
   ghproxy: string,
 ): string {
   const scriptFile = platform === "windows" ? "install.ps1" : "install.sh";
-  let scriptUrl = `https://raw.githubusercontent.com/komari-monitor/komari-agent/refs/heads/main/${scriptFile}`;
+  let scriptUrl = `https://raw.githubusercontent.com/komari-probe/komari-probe-agent/refs/heads/main/${scriptFile}`;
   const trimmedGhproxy = ghproxy.trim();
   if (ghproxyEnabled && trimmedGhproxy) {
     scriptUrl = scriptUrl.slice(8); // 去掉 https://
@@ -197,13 +197,13 @@ export function buildInstallCommand(
           `touch .komari-auto-discovery.json && ` +
           `docker run -d --name komari-agent --restart=always ` +
           `-v .komari-auto-discovery.json:/app/auto-discovery.json ` +
-          `ghcr.io/komari-monitor/komari-agent:latest ` +
+          `ghcr.io/komari-probe/komari-probe-agent:latest ` +
           quoteShellArgs(dockerArgs)
         );
       }
       return (
         `docker run -d --name komari-agent --restart=always ` +
-        `ghcr.io/komari-monitor/komari-agent:latest ` +
+        `ghcr.io/komari-probe/komari-probe-agent:latest ` +
         quoteShellArgs(dockerArgs)
       );
     }
