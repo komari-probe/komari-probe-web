@@ -166,12 +166,6 @@ export const routes: RouteObject[] = [
             ),
           },
           {
-            path: "xtermjs",
-            element: React.createElement(
-              lazy(() => import("./features/settings/xtermjs"))
-            ),
-          },
-          {
             path: "metrics",
             element: React.createElement(
               lazy(() => import("./features/settings/metrics"))
@@ -240,16 +234,8 @@ export const routes: RouteObject[] = [
       {
         path: "pprof",
         element: React.createElement(lazy(() => import("./features/system/pprof"))),
-      },
-      {
-        path: "exec",
-        element: React.createElement(lazy(() => import("./features/operations/exec"))),
       }
     ],
-  },
-  {
-    path: "/terminal",
-    element: React.createElement(lazy(() => import("./terminal"))),
   },
   {
     path: "/manage/*",

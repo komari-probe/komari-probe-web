@@ -52,12 +52,12 @@ function localKomariThemePlugin(): Plugin {
 // Vite's dev server only knows how to fall back to the project's default
 // `index.html` for unmatched navigations. The admin app is a second HTML
 // entry (`admin.html`), so without this, typing a deep admin URL (or any
-// full-page navigation under /admin, /terminal, /manage, /install,
+// full-page navigation under /admin, /manage, /install,
 // /database-recovery) in the browser during `vite --mode admin` incorrectly
 // loads the public theme's index.html instead and 404s. Mirror the same
 // path rules the Go backend uses in production to decide which HTML to serve.
 function adminDevFallbackPlugin(): Plugin {
-  const adminPathPrefixes = ["/admin", "/terminal", "/manage", "/database-recovery"];
+  const adminPathPrefixes = ["/admin", "/manage", "/database-recovery"];
   const adminExactPaths = new Set(["/install"]);
   const isAdminPath = (pathname: string) =>
     adminExactPaths.has(pathname) || adminPathPrefixes.some((p) => pathname.startsWith(p));
@@ -173,20 +173,8 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: [
           { find: "@", replacement: path.resolve(__dirname, "./src") },
-          {
-            find: /^monaco-editor-codicon\.css$/,
-            replacement: path.resolve(
-              __dirname,
-              "node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.css",
-            ),
-          },
-        // Force xterm to use the CJS build to avoid a rollup bug where `||=` in
-        // xterm.mjs is incorrectly lowered to `void 0||(i={})` with an undeclared `i`,
-        // causing `ReferenceError: i is not defined` at requestMode when vi sends DECRQM sequences.
-        // Regex to match only the bare specifier, not subpaths like @xterm/xterm/css/xterm.css.
-        { find: /^@xterm\/xterm$/, replacement: path.resolve(__dirname, "node_modules/@xterm/xterm/lib/xterm.js") },
-      ],
-    },
+        ],
+      },
     build: {
       assetsDir: "assets",
       // Theme archives have always exposed their public entry as dist/index.html.
