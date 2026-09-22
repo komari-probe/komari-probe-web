@@ -77,11 +77,21 @@ const Flag = React.memo(({ flag, size }: FlagProps) => {
   const { t } = useTranslation();
   altText = t("common.region_flag_alt", { name: resolvedFlagFileName });
 
+  // `size` follows Tailwind's spacing scale (1 unit = 0.25rem), matching the
+  // w-6/h-6 default below. Computed inline because Tailwind can't statically
+  // discover a dynamically interpolated class name like `w-${size}`.
+  const sideLength = `${(Number(size) || 6) * 0.25}rem`;
+
   return (
     <Box
       as="span"
-      className={`km-flag m-2 self-center ${size ? `w-${size} h-${size}` : "w-6 h-6"}`}
-      style={{ display: "inline-flex", alignItems: "center" }}
+      className="km-flag m-2 self-center"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        width: sideLength,
+        height: sideLength,
+      }}
       aria-label={altText}
     >
       <img

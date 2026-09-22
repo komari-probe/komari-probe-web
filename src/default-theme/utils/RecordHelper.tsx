@@ -1,4 +1,4 @@
-import type { Record } from "@/default-theme/types/LiveData";
+import type { NodeLiveRecord } from "@/default-theme/types/LiveData";
 
 export interface RecordFormat {
   client: string;
@@ -37,7 +37,7 @@ export interface RecordFormat {
 
 export function liveDataToRecords(
   client: string,
-  liveData: Record[]
+  liveData: NodeLiveRecord[]
 ): RecordFormat[] {
   if (!liveData) return [];
   return liveData.map((data) => ({

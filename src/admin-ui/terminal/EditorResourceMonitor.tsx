@@ -1,42 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ArrowDown, ArrowUp, Gauge } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNodeList } from "@/shared/contexts/NodeListContext";
-import { useRPC2Call } from "@/shared/contexts/RPC2Context";
 import { getOSImage } from "@/shared/utils/osImageHelper";
 import { formatBytes } from "@/shared/utils/unitHelper";
-
-interface RawLatestStatus {
-  online?: boolean;
-  cpu?: number;
-  ram?: number;
-  disk?: number;
-  net_in?: number;
-  net_out?: number;
-}
-
-interface ResourceSample {
-  online: boolean;
-  cpuUsage: number;
-  ramUsed: number;
-  diskUsed: number;
-  networkDown: number;
-  networkUp: number;
-}
-
-const RESOURCE_UPDATE_INTERVAL_MS = 2000;
-
-const normalizePercent = (value: number) =>
-  Math.min(100, Math.max(0, Number.isFinite(value) ? value : 0));
-
-const usagePercent = (used: number, total: number) =>
-  total > 0 ? normalizePercent((used / total) * 100) : 0;
-
-const usageColor = (percent: number) => {
-  if (percent >= 90) return "#dc143c";
-  if (percent >= 70) return "#eab308";
-  return "#3cb371";
-};
+import {
+  normalizePercent,
+  usageColor,
+  usagePercent,
+  useNodeResourceSamples,
+} from "./useNodeResourceSamples";
 
 const UsageMetric = ({
   label,
@@ -70,60 +43,14 @@ interface EditorResourceMonitorProps {
 
 const EditorResourceMonitor = ({ uuid }: EditorResourceMonitorProps) => {
   const { t } = useTranslation();
-  const { call } = useRPC2Call();
   const { nodeList } = useNodeList(false) ?? { nodeList: [] };
-  const [sample, setSample] = useState<ResourceSample | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const { samples, loadError } = useNodeResourceSamples(useMemo(() => [uuid], [uuid]));
+  const sample = samples[uuid] ?? null;
 
   const node = useMemo(
     () => (nodeList ?? []).find((item) => item.uuid === uuid),
     [nodeList, uuid],
   );
-
-  useEffect(() => {
-    if (!uuid) return;
-
-    let stopped = false;
-    let running = false;
-    let requestSequence = 0;
-
-    const refresh = async () => {
-      if (running || document.hidden) return;
-      running = true;
-      const sequence = ++requestSequence;
-
-      try {
-        const result = await call<
-          Record<string, never>,
-          Record<string, RawLatestStatus>
-        >("common:getNodesLatestStatus");
-        if (stopped || sequence !== requestSequence) return;
-
-        const record = result?.[uuid];
-        setSample({
-          online: record?.online === true,
-          cpuUsage: normalizePercent(record?.cpu ?? 0),
-          ramUsed: record?.ram ?? 0,
-          diskUsed: record?.disk ?? 0,
-          networkDown: record?.net_in ?? 0,
-          networkUp: record?.net_out ?? 0,
-        });
-        setLoadError(false);
-      } catch {
-        if (!stopped && sequence === requestSequence) setLoadError(true);
-      } finally {
-        running = false;
-      }
-    };
-
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), RESOURCE_UPDATE_INTERVAL_MS);
-
-    return () => {
-      stopped = true;
-      window.clearInterval(timer);
-    };
-  }, [call, uuid]);
 
   return (
     <section className="shrink-0 border-t border-[#2b2b2b] bg-[#181818]" aria-label={t("terminal.resource_monitor.title", "资源小窗")}>

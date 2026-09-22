@@ -25,6 +25,7 @@ import { useRPC2Call } from "@/shared/contexts/RPC2Context";
 import { formatBytes } from "@/shared/utils/unitHelper";
 import Loading from "@/shared/components/loading";
 import Tips from "@/shared/ui/tips";
+import { computeRenewalDate } from "@/admin-ui/utils/renewal";
 import {
   ChartContainer,
   ChartTooltip,
@@ -140,40 +141,6 @@ const latencyColor = (ms: number): "green" | "yellow" | "red" =>
 
 const volatilityColor = (value: number): "green" | "yellow" | "red" =>
   value < 0.3 ? "green" : value <= 1 ? "yellow" : "red";
-
-// 与后端 utils/renewal 保持一致：
-// 27-32 按自然月 +1 月，87-95 +3 月，175-185 +6 月，
-// 360-370 +1 年，720-750 +2 年，1080-1150 +3 年，1800-1850 +5 年，其余 +天数。
-const computeRenewalDate = (
-  expiredAt: Date,
-  billingCycle: number,
-): Date | null => {
-  if (!billingCycle || billingCycle <= 0) return null;
-  const now = new Date();
-  let base = new Date(expiredAt);
-  if (expiredAt.getTime() < now.getTime() - 30 * DAY_MS) {
-    base = now;
-  }
-  const result = new Date(base);
-  if (billingCycle >= 27 && billingCycle <= 32) {
-    result.setMonth(result.getMonth() + 1);
-  } else if (billingCycle >= 87 && billingCycle <= 95) {
-    result.setMonth(result.getMonth() + 3);
-  } else if (billingCycle >= 175 && billingCycle <= 185) {
-    result.setMonth(result.getMonth() + 6);
-  } else if (billingCycle >= 360 && billingCycle <= 370) {
-    result.setFullYear(result.getFullYear() + 1);
-  } else if (billingCycle >= 720 && billingCycle <= 750) {
-    result.setFullYear(result.getFullYear() + 2);
-  } else if (billingCycle >= 1080 && billingCycle <= 1150) {
-    result.setFullYear(result.getFullYear() + 3);
-  } else if (billingCycle >= 1800 && billingCycle <= 1850) {
-    result.setFullYear(result.getFullYear() + 5);
-  } else {
-    result.setDate(result.getDate() + billingCycle);
-  }
-  return result;
-};
 
 type TopRankItem = {
   uuid: string;

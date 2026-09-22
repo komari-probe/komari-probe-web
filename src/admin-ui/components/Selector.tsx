@@ -141,7 +141,7 @@ function SelectorInner<T>(props: SelectorProps<T>) {
                     handleCheck(id, !value.includes(id));
                   }}
                 >
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={value.includes(id)}
                       onCheckedChange={(checked) => handleCheck(id, !!checked)}
@@ -160,7 +160,7 @@ function SelectorInner<T>(props: SelectorProps<T>) {
                   handleCheck(id, !value.includes(id));
                 }}
               >
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <Checkbox
                     checked={value.includes(id)}
                     onCheckedChange={(checked) => handleCheck(id, !!checked)}

@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import type {
   LiveDataResponse,
-  Record as LiveRecord,
+  NodeLiveRecord as LiveRecord,
 } from "@/default-theme/types/LiveData";
 import { useRPC2Call } from "@/shared/contexts/RPC2Context";
 
@@ -18,6 +18,27 @@ const LIVE_DATA_INTERVAL_MS = 2000;
 const sameStringArray = (left: string[], right: string[]) =>
   left.length === right.length &&
   left.every((value, index) => value === right[index]);
+
+const sameGpu = (left: LiveRecord["gpu"], right: LiveRecord["gpu"]) => {
+  if (!left || !right) return Boolean(left) === Boolean(right);
+  if (
+    left.average_usage !== right.average_usage ||
+    left.count !== right.count ||
+    left.detailed_info.length !== right.detailed_info.length
+  ) {
+    return false;
+  }
+  return left.detailed_info.every((device, index) => {
+    const other = right.detailed_info[index];
+    return (
+      device.name === other.name &&
+      device.memory_total === other.memory_total &&
+      device.memory_used === other.memory_used &&
+      device.utilization === other.utilization &&
+      device.temperature === other.temperature
+    );
+  });
+};
 
 const sameLiveRecord = (left: LiveRecord, right: LiveRecord) =>
   left.cpu.usage === right.cpu.usage &&
@@ -33,8 +54,7 @@ const sameLiveRecord = (left: LiveRecord, right: LiveRecord) =>
   left.network.totalDown === right.network.totalDown &&
   left.connections.tcp === right.connections.tcp &&
   left.connections.udp === right.connections.udp &&
-  left.gpu?.average_usage === right.gpu?.average_usage &&
-  Boolean(left.gpu) === Boolean(right.gpu) &&
+  sameGpu(left.gpu, right.gpu) &&
   left.uptime === right.uptime &&
   left.process === right.process &&
   left.message === right.message &&
@@ -79,7 +99,11 @@ const mergeLiveData = (
       },
       gpu:
         record.gpu !== undefined
-          ? { count: 0, average_usage: record.gpu, detailed_info: [] }
+          ? {
+              count: record.gpu_count ?? 0,
+              average_usage: record.gpu,
+              detailed_info: record.gpu_detailed_info ?? [],
+            }
           : undefined,
       uptime: record.uptime ?? 0,
       process: record.process ?? 0,

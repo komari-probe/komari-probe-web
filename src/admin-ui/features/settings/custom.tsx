@@ -3,7 +3,7 @@ import { Text } from "@radix-ui/themes";
 import {
   updateSettingsWithToast,
   useSettings,
-} from "@/shared/api/api";
+} from "@/admin-ui/api/settings";
 import { SettingCardLongTextInput } from "@/admin-ui/components/SettingCard";
 import Loading from "@/shared/components/loading";
 

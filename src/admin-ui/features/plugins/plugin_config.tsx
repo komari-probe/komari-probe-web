@@ -20,6 +20,7 @@ import { useRPC2Call } from "@/shared/contexts/RPC2Context";
 import { resolveI18nText } from "@/admin-ui/utils/i18nText";
 import { iconMap, resolvePluginIcon } from "@/admin-ui/utils/iconHelper";
 import type { I18nText } from "@/admin-ui/utils/i18nText";
+import { hasConfiguration } from "@/admin-ui/types/plugin";
 import type { PluginConfiguration, PluginInfo, PluginConfigItem } from "@/admin-ui/types/plugin";
 
 interface ConfigurationResponse {
@@ -72,11 +73,6 @@ export default function PluginConfigPage() {
     (value: I18nText | undefined) => resolveI18nText(value, language) || "",
     [language],
   );
-
-  // 插件是否声明了可展示配置项（忽略 title 分组项），无配置项的插件不显示在列表中。
-  const hasConfiguration = (plugin: PluginInfo) =>
-    Array.isArray(plugin?.configuration?.data) &&
-    plugin!.configuration!.data!.some((item) => item.type !== "title");
 
   const configurablePlugins = useMemo(
     () => plugins.filter(hasConfiguration),

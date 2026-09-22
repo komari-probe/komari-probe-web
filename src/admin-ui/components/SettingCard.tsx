@@ -750,6 +750,7 @@ export function SettingCardCollapse({
   bordless?: boolean;
 }) {
   const [open, setOpen] = React.useState(defaultOpen);
+  const contentId = React.useId();
 
   return (
     <SettingCard
@@ -763,7 +764,7 @@ export function SettingCardCollapse({
           variant="soft"
           onClick={() => setOpen(!open)}
           aria-expanded={open}
-          aria-controls="collapsible-content"
+          aria-controls={contentId}
         >
           <motion.div
             initial={{ rotate: 0, scale: 1 }}
@@ -784,7 +785,7 @@ export function SettingCardCollapse({
             exit={{ height: 0, opacity: 0, y: -10 }}
             transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
             style={{ overflow: "hidden" }} // Prevents content clipping during animation
-            id="collapsible-content"
+            id={contentId}
           >
             <div className="border-t-1 my-2" />
             {children}

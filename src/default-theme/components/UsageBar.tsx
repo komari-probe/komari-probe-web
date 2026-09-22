@@ -2,10 +2,13 @@ import { Box, Flex, Text } from "@radix-ui/themes";
 import React from "react";
 
 interface UsageBarProps {
-  value: number; // Utilization percentage (0–100)
+  value: number; // Already a percentage (0–100, or higher for over-limit usage)
   label: string; // Label for the bar (e.g., "CPU", "Memory", "Disk")
   compact?: boolean; // Whether to show in compact mode (for tables)
-  max?: number; // Maximum value for the bar (e.g., total RAM, total disk space)
+  // Upper clamp for `value`, not a raw total (e.g. NOT total RAM in bytes).
+  // `value` must already be a percentage — this only bounds how high the
+  // bar/label can read; pass Infinity to allow over-100% display uncapped.
+  max?: number;
 }
 
 const UsageBar = React.memo(

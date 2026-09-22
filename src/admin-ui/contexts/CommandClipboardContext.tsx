@@ -62,7 +62,7 @@ export const CommandClipboardProvider: React.FC<{
       if (!response.ok) {
         throw new Error("Failed to add command");
       }
-      refresh();
+      await refresh();
     } catch (err) {
       setError(err as Error);
     } finally {
@@ -88,7 +88,7 @@ export const CommandClipboardProvider: React.FC<{
       if (!response.ok) {
         throw new Error("Failed to update command");
       }
-      refresh();
+      await refresh();
     } catch (err) {
       setError(err as Error);
     } finally {
@@ -104,7 +104,7 @@ export const CommandClipboardProvider: React.FC<{
       if (!response.ok) {
         throw new Error("Failed to delete command");
       }
-      refresh();
+      await refresh();
     } catch (err) {
       setError(err as Error);
     } finally {

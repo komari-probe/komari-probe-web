@@ -60,10 +60,11 @@ export const PingTaskProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   React.useEffect(() => {
+    // refresh() is async and already flips isLoading back to false in its
+    // own .finally() once the fetch settles — setting it false here too
+    // would do so immediately, before the request completes.
     setIsLoading(true);
-
     refresh();
-    setIsLoading(false);
   }, []);
 
   return (

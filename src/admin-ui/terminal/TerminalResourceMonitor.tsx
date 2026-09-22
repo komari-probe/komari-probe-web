@@ -2,28 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowDown, ArrowUp, Gauge, X } from "lucide-react";
-import { useRPC2Call } from "@/shared/contexts/RPC2Context";
 import { useNodeList } from "@/shared/contexts/NodeListContext";
 import { getOSImage } from "@/shared/utils/osImageHelper";
 import { formatBytes } from "@/shared/utils/unitHelper";
-
-interface RawLatestStatus {
-  online?: boolean;
-  cpu?: number;
-  ram?: number;
-  disk?: number;
-  net_in?: number;
-  net_out?: number;
-}
-
-interface ResourceSample {
-  online: boolean;
-  cpuUsage: number;
-  ramUsed: number;
-  diskUsed: number;
-  networkDown: number;
-  networkUp: number;
-}
+import {
+  usageColor,
+  usagePercent,
+  useNodeResourceSamples,
+} from "./useNodeResourceSamples";
 
 interface TerminalResourceMonitorProps {
   clients: Array<{
@@ -35,7 +21,6 @@ interface TerminalResourceMonitorProps {
   onRemove: (uuid: string) => void;
 }
 
-const RESOURCE_UPDATE_INTERVAL_MS = 2000;
 const MONITOR_EDGE_MARGIN = 8;
 
 const clampMonitorPosition = (
@@ -62,23 +47,6 @@ const clampMonitorPosition = (
 
 const normalizePercent = (value: number) =>
   Math.min(100, Math.max(0, Number.isFinite(value) ? value : 0));
-
-const usagePercent = (used: number, total: number) =>
-  total > 0 ? normalizePercent((used / total) * 100) : 0;
-
-const usageColor = (percent: number) => {
-  if (percent >= 90) return "#dc143c";
-  if (percent >= 70) return "#eab308";
-  return "#3cb371";
-};
-
-const sameSample = (left: ResourceSample, right: ResourceSample) =>
-  left.online === right.online &&
-  left.cpuUsage === right.cpuUsage &&
-  left.ramUsed === right.ramUsed &&
-  left.diskUsed === right.diskUsed &&
-  left.networkDown === right.networkDown &&
-  left.networkUp === right.networkUp;
 
 const UsageRow = ({
   label,
@@ -116,10 +84,8 @@ const TerminalResourceMonitor = ({
   onRemove,
 }: TerminalResourceMonitorProps) => {
   const { t } = useTranslation();
-  const { call } = useRPC2Call();
   const { nodeList } = useNodeList(false) ?? { nodeList: [] };
-  const [samples, setSamples] = useState<Record<string, ResourceSample>>({});
-  const [loadError, setLoadError] = useState(false);
+  const { samples, loadError } = useNodeResourceSamples(servers);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(
     null,
   );
@@ -133,7 +99,6 @@ const TerminalResourceMonitor = ({
     originY: number;
   } | null>(null);
 
-  const serverKey = servers.join("|");
   const clientByUuid = useMemo(
     () => new Map(clients.map((client) => [client.uuid, client])),
     [clients],
@@ -142,76 +107,6 @@ const TerminalResourceMonitor = ({
     () => new Map((nodeList ?? []).map((node) => [node.uuid, node])),
     [nodeList],
   );
-
-  useEffect(() => {
-    const selectedServers = serverKey ? serverKey.split("|") : [];
-    if (selectedServers.length === 0) {
-      setSamples({});
-      setLoadError(false);
-      return;
-    }
-
-    let stopped = false;
-    let running = false;
-    let requestSequence = 0;
-
-    const refresh = async () => {
-      if (running || document.hidden) return;
-      running = true;
-      const sequence = ++requestSequence;
-
-      try {
-        const result = await call<
-          Record<string, never>,
-          Record<string, RawLatestStatus>
-        >("common:getNodesLatestStatus");
-        if (stopped || sequence !== requestSequence) return;
-
-        const next: Record<string, ResourceSample> = {};
-        for (const uuid of selectedServers) {
-          const record = result?.[uuid];
-          next[uuid] = {
-            online: record?.online === true,
-            cpuUsage: normalizePercent(record?.cpu ?? 0),
-            ramUsed: record?.ram ?? 0,
-            diskUsed: record?.disk ?? 0,
-            networkDown: record?.net_in ?? 0,
-            networkUp: record?.net_out ?? 0,
-          };
-        }
-
-        setSamples((previous) => {
-          const previousKeys = Object.keys(previous);
-          const changed =
-            previousKeys.length !== selectedServers.length ||
-            previousKeys.some(
-              (uuid) => !next[uuid] || !sameSample(previous[uuid], next[uuid]),
-            );
-          return changed ? next : previous;
-        });
-        setLoadError(false);
-      } catch {
-        if (!stopped && sequence === requestSequence) {
-          setLoadError(true);
-        }
-      } finally {
-        running = false;
-      }
-    };
-
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), RESOURCE_UPDATE_INTERVAL_MS);
-    const handleVisibilityChange = () => {
-      if (!document.hidden) void refresh();
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      stopped = true;
-      window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [call, serverKey]);
 
   useEffect(() => {
     if (!position) return;

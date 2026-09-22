@@ -1,7 +1,7 @@
 import { Flex } from "@radix-ui/themes";
 import { useTranslation } from "react-i18next";
 import { Text } from "@radix-ui/themes";
-import { updateSettingsWithToast, useSettings } from "@/shared/api/api";
+import { updateSettingsWithToast, useSettings } from "@/admin-ui/api/settings";
 import Loading from "@/shared/components/loading";
 import {
   SettingCardLabel,

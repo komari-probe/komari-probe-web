@@ -1,9 +1,9 @@
 export type LiveData = {
     online: string[];
-    data: { [key: string]: Record };
+    data: { [key: string]: NodeLiveRecord };
 };
 
-export type Record = {
+export type NodeLiveRecord = {
   cpu: {
     usage: number;
   };

@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 import type { NodeBasicInfo } from "@/shared/contexts/NodeListContext";
-import type { LiveData, Record } from "@/default-theme/types/LiveData";
+import type { LiveData, NodeLiveRecord } from "@/default-theme/types/LiveData";
 import { formatUptime } from "./Node";
 import { formatBytes } from "@/shared/utils/unitHelper";
 import UsageBar from "@/default-theme/components/UsageBar";
@@ -61,7 +61,7 @@ const DEFAULT_TABLE_LIVE = {
   process: 0,
   message: "",
   updated_at: "",
-} as Record;
+} as NodeLiveRecord;
 
 const NodeTable: React.FC<NodeTableProps> = ({ nodes, liveData, onlineSet }) => {
   const [t] = useTranslation();
@@ -121,7 +121,7 @@ const NodeTable: React.FC<NodeTableProps> = ({ nodes, liveData, onlineSet }) => 
   }, [sortState.field, sortState.order]);
 
   const getNodeData = useCallback(
-    (uuid: string): Record => liveData.data[uuid] || DEFAULT_TABLE_LIVE,
+    (uuid: string): NodeLiveRecord => liveData.data[uuid] || DEFAULT_TABLE_LIVE,
     [liveData.data],
   );
 
@@ -483,7 +483,7 @@ const NodeTable: React.FC<NodeTableProps> = ({ nodes, liveData, onlineSet }) => 
 // 展开的节点详细信息组件
 interface ExpandedNodeDetailsProps {
   node: NodeBasicInfo;
-  nodeData: Record;
+  nodeData: NodeLiveRecord;
 }
 
 const ExpandedNodeDetails: React.FC<ExpandedNodeDetailsProps> = ({

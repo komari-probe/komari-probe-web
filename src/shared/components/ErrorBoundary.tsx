@@ -77,7 +77,10 @@ class ErrorBoundary extends React.Component<
               {i18n.t("errorBoundary.reload_page", "Reload Page")}
             </button>
             <button
-              onClick={() => (window.location.href = "/")}
+              onClick={() =>
+                (window.location.href =
+                  __KOMARI_APP_KIND__ === "admin" ? "/admin/dashboard" : "/")
+              }
               className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg shadow hover:bg-gray-300 transition-all duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
             >
               {i18n.t("errorBoundary.go_to_home", "Go to Home")}

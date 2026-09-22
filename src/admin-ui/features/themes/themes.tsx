@@ -30,9 +30,9 @@ import { useNavigate } from "react-router-dom";
 import { useAdminNavigation } from "@/admin-ui/contexts/AdminNavigationContext";
 import { usePublicInfo } from "@/shared/contexts/PublicInfoContext";
 import Loading from "@/shared/components/loading";
-import { useSettings } from "@/shared/api/api";
+import { useSettings } from "@/admin-ui/api/settings";
 import UploadDialog from "@/admin-ui/components/UploadDialog";
-import { createChunkUploadTask, type ChunkUploadTask } from "@/shared/api/chunkUpload";
+import { createChunkUploadTask, type ChunkUploadTask } from "@/admin-ui/api/chunkUpload";
 import {
   getThemeConfigurationType,
   THEME_CONFIGURATION_MANAGED,

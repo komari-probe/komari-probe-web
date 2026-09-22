@@ -33,22 +33,14 @@ import { toast } from "sonner";
 import Loading from "@/shared/components/loading";
 import { useRPC2Call } from "@/shared/contexts/RPC2Context";
 import { resolveI18nText, type I18nText } from "@/admin-ui/utils/i18nText";
-import type { PluginInfo } from "@/admin-ui/types/plugin";
-
-interface MarketSource {
-  id: string;
-  name: string;
-  url: string;
-  enabled: boolean;
-}
-
-interface SourceStatus {
-  id: string;
-  name: string;
-  url: string;
-  count: number;
-  error?: string;
-}
+import { hasConfiguration, type PluginInfo } from "@/admin-ui/types/plugin";
+import {
+  emptyMarketSource,
+  isVersionNewer,
+  requestMarketAPI,
+  type MarketSource,
+  type MarketSourceStatus,
+} from "@/admin-ui/api/market";
 
 interface MarketPlugin {
   name: I18nText;
@@ -63,37 +55,6 @@ interface MarketPlugin {
   installable: boolean;
   source_id: string;
   source_name: string;
-}
-
-interface APIResponse<T> {
-  status: string;
-  message?: string;
-  data: T;
-}
-
-const emptySource = (): Omit<MarketSource, "id"> => ({
-  name: "",
-  url: "",
-  enabled: true,
-});
-
-function isVersionNewer(candidate: string, installed: string) {
-  const parse = (value: string) => {
-    const match = value
-      .trim()
-      .replace(/^v/i, "")
-      .match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
-    return match
-      ? [Number(match[1]), Number(match[2] || 0), Number(match[3] || 0)]
-      : null;
-  };
-  const next = parse(candidate);
-  const current = parse(installed);
-  if (!next || !current) return candidate !== installed;
-  for (let index = 0; index < next.length; index += 1) {
-    if (next[index] !== current[index]) return next[index] > current[index];
-  }
-  return false;
 }
 
 function isKomariCompatible(constraint: string | undefined, current: string) {
@@ -148,22 +109,6 @@ function isKomariCompatible(constraint: string | undefined, current: string) {
   }
 }
 
-// 插件是否声明了可编辑配置项（忽略 title 分组项）。
-const hasConfiguration = (plugin: PluginInfo | undefined) =>
-  Array.isArray(plugin?.configuration?.data) &&
-  plugin!.configuration!.data!.some((item) => item.type !== "title");
-
-async function request<T>(input: RequestInfo | URL, init?: RequestInit) {
-  const response = await fetch(input, init);
-  const payload = (await response
-    .json()
-    .catch(() => null)) as APIResponse<T> | null;
-  if (!response.ok || !payload || payload.status === "error") {
-    throw new Error(payload?.message || `HTTP ${response.status}`);
-  }
-  return payload;
-}
-
 // 插件市场：源管理与主题市场一致（增/改/删/启停 + 目录刷新）。
 export default function PluginMarketPage() {
   const { call } = useRPC2Call();
@@ -177,7 +122,7 @@ export default function PluginMarketPage() {
 
   const [plugins, setPlugins] = useState<MarketPlugin[]>([]);
   const [currentVersion, setCurrentVersion] = useState("");
-  const [sourceStatuses, setSourceStatuses] = useState<SourceStatus[]>([]);
+  const [sourceStatuses, setSourceStatuses] = useState<MarketSourceStatus[]>([]);
   const [sources, setSources] = useState<MarketSource[]>([]);
   const [installed, setInstalled] = useState<Map<string, string>>(new Map());
   const [installedInfo, setInstalledInfo] = useState<Map<string, PluginInfo>>(
@@ -192,14 +137,14 @@ export default function PluginMarketPage() {
   const [deletingPlugin, setDeletingPlugin] = useState<string | null>(null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [editingID, setEditingID] = useState<string | null>(null);
-  const [sourceForm, setSourceForm] = useState(emptySource());
+  const [sourceForm, setSourceForm] = useState(emptyMarketSource());
   const [savingSource, setSavingSource] = useState(false);
   const [sourceToDelete, setSourceToDelete] = useState<MarketSource | null>(
     null,
   );
 
   const loadSources = useCallback(async () => {
-    const payload = await request<MarketSource[]>(
+    const payload = await requestMarketAPI<MarketSource[]>(
       "/api/admin/plugin/market/sources",
     );
     setSources(payload.data || []);
@@ -209,7 +154,7 @@ export default function PluginMarketPage() {
     async (force = false) => {
       const suffix = force ? "?refresh=true" : "";
       const [catalogPayload, installedResult, versionInfo] = await Promise.all([
-        request<{ plugins: MarketPlugin[]; sources: SourceStatus[] }>(
+        requestMarketAPI<{ plugins: MarketPlugin[]; sources: MarketSourceStatus[] }>(
           `/api/admin/plugin/market/catalog${suffix}`,
         ),
         call<any, PluginInfo[]>("admin:listPlugins").catch(() => []),
@@ -270,7 +215,7 @@ export default function PluginMarketPage() {
     const key = `${plugin.source_id}:${plugin.short}`;
     setInstalling(key);
     try {
-      const payload = await request("/api/admin/plugin/market/install", {
+      const payload = await requestMarketAPI("/api/admin/plugin/market/install", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -305,7 +250,7 @@ export default function PluginMarketPage() {
 
   const startCreateSource = () => {
     setEditingID(null);
-    setSourceForm(emptySource());
+    setSourceForm(emptyMarketSource());
   };
 
   const startEditSource = (source: MarketSource) => {
@@ -321,7 +266,7 @@ export default function PluginMarketPage() {
     if (!sourceForm.name.trim() || !sourceForm.url.trim()) return;
     setSavingSource(true);
     try {
-      await request(
+      await requestMarketAPI(
         editingID
           ? `/api/admin/plugin/market/sources/${encodeURIComponent(editingID)}`
           : "/api/admin/plugin/market/sources",
@@ -350,7 +295,7 @@ export default function PluginMarketPage() {
     enabled: boolean,
   ) => {
     try {
-      await request(
+      await requestMarketAPI(
         `/api/admin/plugin/market/sources/${encodeURIComponent(source.id)}`,
         {
           method: "PUT",
@@ -366,7 +311,7 @@ export default function PluginMarketPage() {
 
   const deleteSource = async (source: MarketSource) => {
     try {
-      await request(
+      await requestMarketAPI(
         `/api/admin/plugin/market/sources/${encodeURIComponent(source.id)}`,
         {
           method: "DELETE",

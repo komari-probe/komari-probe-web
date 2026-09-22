@@ -14,8 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/ui/table";
-import { useSettings } from "@/shared/api/api";
-import type { SettingsResponse } from "@/shared/api/api";
+import { useSettings } from "@/admin-ui/api/settings";
+import type { SettingsResponse } from "@/admin-ui/api/settings";
 import { useRPC2Call } from "@/shared/contexts/RPC2Context";
 import { resolveI18nText, type I18nText } from "@/admin-ui/utils/i18nText";
 import {

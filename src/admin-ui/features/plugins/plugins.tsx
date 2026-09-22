@@ -26,21 +26,16 @@ import { toast } from "sonner";
 import Loading from "@/shared/components/loading";
 import InlineSvgIcon from "@/admin-ui/components/InlineSvgIcon";
 import UploadDialog from "@/admin-ui/components/UploadDialog";
-import { createChunkUploadTask, type ChunkUploadTask } from "@/shared/api/chunkUpload";
+import { createChunkUploadTask, type ChunkUploadTask } from "@/admin-ui/api/chunkUpload";
 import { useAdminNavigation } from "@/admin-ui/contexts/AdminNavigationContext";
 import { useRPC2Call } from "@/shared/contexts/RPC2Context";
 import { resolveI18nText, type I18nText } from "@/admin-ui/utils/i18nText";
 import { iconMap, resolvePluginIcon } from "@/admin-ui/utils/iconHelper";
-import type { PluginInfo } from "@/admin-ui/types/plugin";
+import { hasConfiguration, type PluginInfo } from "@/admin-ui/types/plugin";
 
 interface SetEnabledResult {
   requires_approval?: boolean;
 }
-
-// 插件是否声明了可编辑配置项（忽略 title 分组项）。
-const hasConfiguration = (plugin: PluginInfo) =>
-  Array.isArray(plugin.configuration?.data) &&
-  plugin.configuration!.data!.some((item) => item.type !== "title");
 
 // 渲染插件 icon：lucide 名用组件，URL/相对路径用图片或内联 SVG，否则默认 Blocks。
 const renderPluginIcon = (

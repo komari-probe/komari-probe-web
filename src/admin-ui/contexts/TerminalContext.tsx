@@ -7,10 +7,9 @@ export interface TerminalContextType {
   sendCommand: (cmd: string) => void;
 }
 
-export const TerminalContext = createContext<TerminalContextType>({
-  terminal: null,
-  sendCommand: () => {},
-});
+export const TerminalContext = createContext<TerminalContextType | undefined>(
+  undefined,
+);
 
 export const useTerminal = (): TerminalContextType => {
   const context = useContext(TerminalContext);

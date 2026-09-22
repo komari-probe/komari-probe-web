@@ -18,6 +18,7 @@ import {
 } from "@/admin-ui/contexts/NotificationContext";
 import React from "react";
 import { Pencil, Search } from "lucide-react";
+import { sanitizeConfigHtml } from "@/admin-ui/utils/sanitizeConfigHtml";
 import { useTranslation } from "react-i18next";
 import {
   Badge,
@@ -245,7 +246,7 @@ const InnerLayout = () => {
       </Flex>
       <label className="km-notification-offline-preview text-sm text-muted-foreground">
         <span
-          dangerouslySetInnerHTML={{ __html: t("notification.offline.tips") }}
+          dangerouslySetInnerHTML={{ __html: sanitizeConfigHtml(t("notification.offline.tips")) }}
         />
       </label>
     </div>

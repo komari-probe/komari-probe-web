@@ -25,16 +25,19 @@ export class UserAgentHelper {
   static parse(userAgent: string = navigator.userAgent): UserAgentInfo {
     const ua = userAgent.toLowerCase();
 
-    // Detect device/OS
+    // Detect device/OS. iOS Safari's UA contains "like Mac OS X" (e.g.
+    // "...CPU iPhone OS 17_0 like Mac OS X..."), so the iphone/ipad check
+    // must run before the mac os x check or every iPhone/iPad gets
+    // misclassified as macOS.
     let device: keyof typeof DEVICE_LABELS = "unknown";
     if (ua.includes("windows nt")) {
       device = "windows";
+    } else if (ua.includes("iphone") || ua.includes("ipad")) {
+      device = "ios";
     } else if (ua.includes("mac os x")) {
       device = "macos";
     } else if (ua.includes("android")) {
       device = "android";
-    } else if (ua.includes("iphone") || ua.includes("ipad")) {
-      device = "ios";
     } else if (ua.includes("linux")) {
       device = "linux";
     }

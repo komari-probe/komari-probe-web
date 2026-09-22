@@ -1,0 +1,98 @@
+name: Nightly Preview Build
+
+on:
+  schedule:
+    # 04:00 UTC (12:00 中国时间)，每天从 main 分支构建一次预览包。
+    - cron: "0 4 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nightly-preview-build
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web package
+        run: npm run build
+
+      - name: Generate nightly version
+        id: version
+        run: |
+          echo "tag=nightly-$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Update theme metadata for preview
+        env:
+          NIGHTLY_TAG: ${{ steps.version.outputs.tag }}
+          NIGHTLY_COMMIT: ${{ steps.version.outputs.commit }}
+        run: |
+          set -euo pipefail
+          jq --arg version "${NIGHTLY_TAG}" \
+             --arg desc "Nightly preview build of Komari Web (commit: ${NIGHTLY_COMMIT})" \
+             '.version = $version | .description = $desc' \
+             komari-theme.json > komari-theme.nightly.json
+          mv komari-theme.nightly.json komari-theme.json
+
+      - name: Package release asset
+        run: |
+          set -euo pipefail
+          rm -f dist-release.zip
+          rm -rf release-package
+          mkdir -p release-package
+          cp preview.webp release-package/
+          cp komari-theme.json release-package/
+          cp -r dist release-package/
+          cd release-package
+          zip -qr ../dist-release.zip .
+
+      - name: Publish nightly prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NIGHTLY_TAG: ${{ steps.version.outputs.tag }}
+          NIGHTLY_COMMIT: ${{ steps.version.outputs.commit }}
+        run: |
+          set -euo pipefail
+
+          gh release create "${NIGHTLY_TAG}" dist-release.zip \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "${NIGHTLY_TAG}" \
+            --notes "Automated nightly preview build from commit ${NIGHTLY_COMMIT}. Not for production use." \
+            --prerelease
+
+          # 只保留最新一份 nightly 预发布，避免 Releases 列表被逐日堆积的旧预览包淹没。
+          gh release list \
+            --repo "${GITHUB_REPOSITORY}" \
+            --limit 1000 \
+            --json tagName,isPrerelease \
+            --jq '.[] | select(.isPrerelease and (.tagName | startswith("nightly-"))) | .tagName' |
+          while IFS= read -r tag; do
+            if [ -n "${tag}" ] && [ "${tag}" != "${NIGHTLY_TAG}" ]; then
+              gh release delete "${tag}" --repo "${GITHUB_REPOSITORY}" --cleanup-tag --yes
+            fi
+          done
+
+          {
+            echo "### Komari Web nightly preview"
+            echo
+            echo "Published ${NIGHTLY_TAG} from commit ${NIGHTLY_COMMIT}."
+          } >> "$GITHUB_STEP_SUMMARY"

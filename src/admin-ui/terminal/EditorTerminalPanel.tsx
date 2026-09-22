@@ -12,6 +12,7 @@ import {
   useXtermjsSettings,
 } from "@/admin-ui/hooks/useXtermjsSettings";
 import type { XtermjsSettings } from "@/admin-ui/hooks/useXtermjsSettings";
+import { useTwoFaStatus } from "@/admin-ui/hooks/useTwoFaStatus";
 import TerminalSession from "./TerminalSession";
 
 interface EditorTerminalPanelProps {
@@ -26,7 +27,7 @@ const EDITOR_TERMINAL_FONT_SIZE = 12;
 const EditorTerminalPanel = ({ uuid, onClose }: EditorTerminalPanelProps) => {
   const { t } = useTranslation();
   const { settings, error } = useXtermjsSettings();
-  const [twoFaEnabled, setTwoFaEnabled] = useState(false);
+  const { enabled: twoFaEnabled } = useTwoFaStatus();
   const [height, setHeight] = useState(180);
   const dragRef = useRef<{
     pointerId: number;
@@ -49,19 +50,6 @@ const EditorTerminalPanel = ({ uuid, onClose }: EditorTerminalPanelProps) => {
       terminalPadding: Math.min(baseSettings.terminalPadding, 8),
     };
   }, [error, settings]);
-
-  useEffect(() => {
-    let mounted = true;
-    void fetch("/api/me")
-      .then((response) => response.json())
-      .then((data: { "2fa_enabled"?: boolean }) => {
-        if (mounted) setTwoFaEnabled(Boolean(data?.["2fa_enabled"]));
-      })
-      .catch(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (!settings.customCss) return;

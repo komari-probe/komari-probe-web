@@ -20,9 +20,17 @@ export default function NumberPicker({
   const initialValue = defaultValue !== undefined ? defaultValue : min;
   const clampedInitial = Math.max(min, Math.min(max, initialValue));
   const [value, setValue] = React.useState(String(clampedInitial));
+  const isMounted = React.useRef(false);
 
-  // Sync defaultValue changes
+  // Sync later defaultValue changes only — not the initial mount, which the
+  // useState initializer above already accounts for. Firing onChange on
+  // mount would surprise callers that treat onChange as "the user changed
+  // this", e.g. one that persists the value to the backend.
   useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
     if (defaultValue === undefined) return;
     const numValue = Math.max(min, Math.min(max, defaultValue));
     setValue(String(numValue));

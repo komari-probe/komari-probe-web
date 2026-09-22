@@ -30,8 +30,11 @@ import {
 import {
   fileDownloadUrl,
   copyTextToClipboard,
+  decodeRemoteDragPaths,
+  encodeRemoteDragPaths,
   formatClipboardPath,
   getDroppedUploadFiles,
+  isInvalidMoveDestination,
   joinRemotePath,
   normalizeRemotePath,
   remoteAncestors,
@@ -74,32 +77,6 @@ type DragTarget =
   | { kind: "directory"; path: string }
   | { kind: "file"; path: string };
 
-const isWithinRemoteDirectory = (path: string, directory: string) => {
-  const source = normalizeRemotePath(path).replace(/\/$/, "");
-  const target = normalizeRemotePath(directory).replace(/\/$/, "");
-  if (source.toLowerCase() === target.toLowerCase()) return false;
-  return source.toLowerCase().startsWith(`${target}/`.toLowerCase());
-};
-
-const isInvalidMoveDestination = (source: string, destination: string) => {
-  const normalizedSource = normalizeRemotePath(source).replace(/\/$/, "");
-  const normalizedDestination = normalizeRemotePath(destination).replace(/\/$/, "");
-  return normalizedSource.toLowerCase() === normalizedDestination.toLowerCase()
-    || isWithinRemoteDirectory(destination, source);
-};
-
-const encodeRemoteDragPaths = (paths: string[]) =>
-  `komari-remote-paths:${JSON.stringify(paths)}`;
-
-const decodeRemoteDragPaths = (value: string): string[] | null => {
-  if (!value.startsWith("komari-remote-paths:")) return null;
-  try {
-    const paths = JSON.parse(value.slice("komari-remote-paths:".length));
-    return Array.isArray(paths) ? paths.filter((path): path is string => typeof path === "string") : null;
-  } catch {
-    return null;
-  }
-};
 
 const TreeFileIcon = ({ file, expanded }: { file: RemoteFileInfo; expanded: boolean }) => {
   if (file.is_dir) {
@@ -907,16 +884,16 @@ export const RemoteFileTree = ({
         </div>
       </div>
       <input
-		ref={uploadInputRef}
-		type="file"
-		className="hidden"
-		multiple
-		onChange={(event) => {
-		  const files = Array.from(event.currentTarget.files ?? []);
-		  event.currentTarget.value = "";
-		  if (files.length) void uploadFiles(files, uploadTargetRef.current || rootPath);
-		}}
-	  />
+        ref={uploadInputRef}
+        type="file"
+        className="hidden"
+        multiple
+        onChange={(event) => {
+          const files = Array.from(event.currentTarget.files ?? []);
+          event.currentTarget.value = "";
+          if (files.length) void uploadFiles(files, uploadTargetRef.current || rootPath);
+        }}
+      />
       {uploadProgress.length > 0 && (
         <TerminalUploadProgress progress={uploadProgress} onCancel={cancelUpload} />
       )}

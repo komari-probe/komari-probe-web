@@ -166,6 +166,35 @@ export const joinRemotePath = (directory: string, name: string) => {
   return normalizeRemotePath(`${base}${separator}${name}`);
 };
 
+export const isWithinRemoteDirectory = (path: string, directory: string) => {
+  const source = normalizeRemotePath(path).replace(/\/$/, "");
+  const target = normalizeRemotePath(directory).replace(/\/$/, "");
+  if (source.toLowerCase() === target.toLowerCase()) return false;
+  return source.toLowerCase().startsWith(`${target}/`.toLowerCase());
+};
+
+export const isInvalidMoveDestination = (source: string, destination: string) => {
+  const normalizedSource = normalizeRemotePath(source).replace(/\/$/, "");
+  const normalizedDestination = normalizeRemotePath(destination).replace(/\/$/, "");
+  return normalizedSource.toLowerCase() === normalizedDestination.toLowerCase()
+    || isWithinRemoteDirectory(destination, source);
+};
+
+const REMOTE_DRAG_PATHS_PREFIX = "komari-remote-paths:";
+
+export const encodeRemoteDragPaths = (paths: string[]) =>
+  `${REMOTE_DRAG_PATHS_PREFIX}${JSON.stringify(paths)}`;
+
+export const decodeRemoteDragPaths = (value: string): string[] | null => {
+  if (!value.startsWith(REMOTE_DRAG_PATHS_PREFIX)) return null;
+  try {
+    const paths = JSON.parse(value.slice(REMOTE_DRAG_PATHS_PREFIX.length));
+    return Array.isArray(paths) ? paths.filter((path): path is string => typeof path === "string") : null;
+  } catch {
+    return null;
+  }
+};
+
 export const resolveSymlinkTargetPath = (file: RemoteFileInfo) => {
   if (!file.is_symlink || !file.target) {
     return null;

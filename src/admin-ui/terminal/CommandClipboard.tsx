@@ -240,16 +240,16 @@ const EditButton = ({ id, name, text, remark, weight }: CommandClipboard) => {
         <Dialog.Title>{t("common.edit")}</Dialog.Title>
         <form onSubmit={handleUpdate}>
           <Flex direction="column" gap="2">
-            <label htmlFor={`name`}>{t("common.name")}</label>
-            <TextField.Root id={`name`} name="name" defaultValue={name} />
-            <label htmlFor={`text`}>{t("common.content")}</label>
-            <TextArea id={`text`} name="text" defaultValue={text} />
-            <label htmlFor={`remark`}>{t("common.remark")}</label>
-            <TextField.Root id={`remark`} name="remark" defaultValue={remark} />
-            <label htmlFor={`weight`}>{t("common.weight")}</label>
+            <label htmlFor={`name-${id}`}>{t("common.name")}</label>
+            <TextField.Root id={`name-${id}`} name="name" defaultValue={name} />
+            <label htmlFor={`text-${id}`}>{t("common.content")}</label>
+            <TextArea id={`text-${id}`} name="text" defaultValue={text} />
+            <label htmlFor={`remark-${id}`}>{t("common.remark")}</label>
+            <TextField.Root id={`remark-${id}`} name="remark" defaultValue={remark} />
+            <label htmlFor={`weight-${id}`}>{t("common.weight")}</label>
             <TextField.Root
               type="number"
-              id={`weight`}
+              id={`weight-${id}`}
               name="weight"
               defaultValue={weight}
             />

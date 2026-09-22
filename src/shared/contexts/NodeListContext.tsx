@@ -62,6 +62,16 @@ interface NodeListContextType {
   refresh: () => void;
 }
 
+// Stashed on globalThis instead of a plain module-level createContext().
+// Wiring NodeListProvider into a lazy-loaded route (React.lazy) once produced
+// two separate module instances of this file in dev (one via the static
+// import graph, one via the lazy chunk's own resolution), so the Provider
+// and a lazy page's useContext() ended up pointing at different Context
+// objects and useNodeList() threw "must be used within a NodeListProvider"
+// even though a Provider was mounted. A global singleton sidesteps that.
+// The other context files here have never gone through that same "first
+// wire into a lazy route" step, so they've never needed this; it isn't
+// evidence that they're safe, only that nobody has hit it yet.
 const NODE_LIST_CONTEXT_KEY = "__komariNodeListContext" as const;
 
 type NodeListContextGlobal = typeof globalThis & {

@@ -60,3 +60,8 @@ export interface PluginInfo {
   running: boolean;
   last_error?: string;
 }
+
+/** Whether a plugin declares any editable/displayable configuration item (ignoring "title" grouping items). */
+export const hasConfiguration = (plugin: PluginInfo | undefined) =>
+  Array.isArray(plugin?.configuration?.data) &&
+  plugin!.configuration!.data!.some((item) => item.type !== "title");

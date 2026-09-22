@@ -1,8 +1,11 @@
+import { sanitizeConfigHtml } from "@/admin-ui/utils/sanitizeConfigHtml";
 import {
-  quotePowerShellArg,
-  quoteShellArg,
-  quoteShellArgs,
-} from "@/admin-ui/utils/shellQuote";
+  buildInstallCommand,
+  buildInstallFlagArgs,
+  emptyAgentInstallOptions,
+  resolveScriptHost,
+  type AgentInstallOptions,
+} from "@/admin-ui/utils/installCommand";
 import React, { useEffect, useState } from "react";
 import {
   NodeDetailsProvider,
@@ -82,7 +85,7 @@ import {
   SettingCardShortTextInput,
   SettingCardSwitch,
 } from "@/admin-ui/components/SettingCard";
-import { useSettings } from "@/shared/api/api";
+import { useSettings } from "@/admin-ui/api/settings";
 import { SelectOrInput } from "@/shared/ui/select-or-input";
 import { useRPC2Call } from "@/shared/contexts/RPC2Context";
 
@@ -111,7 +114,7 @@ const Layout = () => {
   useEffect(() => {
     const interval = setInterval(() => { refresh() }, 5000);
     return () => clearInterval(interval);
-  }, [nodeDetail]);
+  }, [refresh]);
 
   if (isLoading) return <Loading text="" />;
   if (error) return <div>{error}</div>;
@@ -175,24 +178,6 @@ const EmptyNodesGuide = () => {
   );
 };
 
-type AutoDiscoveryInstallOptions = {
-  disableWebSsh: boolean;
-  disableAutoUpdate: boolean;
-  ignoreUnsafeCert: boolean;
-  memoryIncludeCache: boolean;
-  getIpAddrFromNic: boolean;
-  enableGpu: boolean;
-  ghproxy: string;
-  dir: string;
-  serviceName: string;
-  includeNics: string;
-  excludeNics: string;
-  includeMountpoints: string;
-  interval: string;
-  monthRotate: string;
-  installVersion: string;
-};
-
 function useIsSnapshotBackend() {
   const { call } = useRPC2Call();
   const [isSnapshotBackend, setIsSnapshotBackend] = useState(false);
@@ -234,23 +219,7 @@ const AutoDiscoverySection = ({
     React.useState<Platform>("linux");
   const [showOptions, setShowOptions] = React.useState(false);
   const [installOptions, setInstallOptions] =
-    React.useState<AutoDiscoveryInstallOptions>({
-      disableWebSsh: false,
-      disableAutoUpdate: false,
-      ignoreUnsafeCert: false,
-      memoryIncludeCache: false,
-      getIpAddrFromNic: false,
-      enableGpu: false,
-      ghproxy: "",
-      dir: "",
-      serviceName: "",
-      includeNics: "",
-      excludeNics: "",
-      includeMountpoints: "",
-      interval: "",
-      monthRotate: "",
-      installVersion: "",
-    });
+    React.useState<AgentInstallOptions>(emptyAgentInstallOptions());
 
   const [enableGhproxy, setEnableGhproxy] = React.useState(false);
   const [enableCustomDir, setEnableCustomDir] = React.useState(false);
@@ -278,158 +247,24 @@ const AutoDiscoverySection = ({
   }, [showOptions, isSnapshotBackend]);
 
   const generateCommand = () => {
-    const host = (function () {
-      if (!settings?.script_domain) {
-        return window.location.origin;
-      }
-      if (settings.script_domain.startsWith("http")) {
-        return settings.script_domain.replace(/\/+$/, "");
-      }
-      return `http://${settings.script_domain.replace(/\/+$/, "")}`;
-    })();
-    const args: string[] = ["-e", host, "--auto-discovery", adKey];
-    if (installOptions.disableWebSsh) {
-      args.push("--disable-web-ssh");
-    }
-    if (installOptions.disableAutoUpdate) {
-      args.push("--disable-auto-update");
-    }
-    if (installOptions.ignoreUnsafeCert) {
-      args.push("--ignore-unsafe-cert");
-    }
-    if (installOptions.memoryIncludeCache) {
-      args.push("--memory-include-cache");
-    }
-    if (installOptions.getIpAddrFromNic) {
-      args.push("--get-ip-addr-from-nic");
-    }
-    if (installOptions.enableGpu) {
-      args.push("--gpu");
-    }
-    const ghproxy = installOptions.ghproxy.trim();
-    if (enableGhproxy && ghproxy) {
-      const finalUrl = (
-        ghproxy.startsWith("http") ? ghproxy : `http://${ghproxy}`
-      ).replace(/\/+$/, "");
-      args.push(`--install-ghproxy`);
-      args.push(finalUrl);
-    }
-    const installDir = installOptions.dir.trim();
-    if (enableCustomDir && installDir) {
-      args.push(`--install-dir`);
-      args.push(installDir);
-    }
-    const serviceName = installOptions.serviceName.trim();
-    if (enableCustomServiceName && serviceName) {
-      args.push(`--install-service-name`);
-      args.push(serviceName);
-    }
-    const installVersion = installOptions.installVersion.trim();
-    if (enableInstallVersion && installVersion) {
-      args.push(`--install-version`);
-      args.push(installVersion);
-    }
-    const includeNics = installOptions.includeNics.trim();
-    if (enableIncludeNics && includeNics) {
-      args.push(`--include-nics`);
-      args.push(includeNics);
-    }
-    const excludeNics = installOptions.excludeNics.trim();
-    if (enableExcludeNics && excludeNics) {
-      args.push(`--exclude-nics`);
-      args.push(excludeNics);
-    }
-    const includeMountpoints = installOptions.includeMountpoints.trim();
-    if (enableIncludeMountpoints && includeMountpoints) {
-      args.push(`--include-mountpoint`);
-      args.push(includeMountpoints);
-    }
-    if (enableInterval) {
-      const intervalVal = Number.parseFloat(
-        (installOptions.interval || "").trim()
-      );
-      args.push("-i");
-      args.push(
-        Number.isFinite(intervalVal) && intervalVal >= 1
-          ? String(intervalVal)
-          : "1"
-      );
-    }
-    if (enableMonthRotate) {
-      const rotateVal = (installOptions.monthRotate || "").trim() || "1";
-      args.push(`--month-rotate`);
-      args.push(rotateVal);
-    }
-
-    let scriptFile = "install.sh";
-    if (selectedPlatform === "windows") {
-      scriptFile = "install.ps1";
-    }
-    let scriptUrl = `https://raw.githubusercontent.com/komari-monitor/komari-agent/refs/heads/main/${scriptFile}`;
-    if (enableGhproxy && ghproxy) {
-      scriptUrl = scriptUrl.slice(8); // 去掉 https://
-      if (ghproxy.endsWith("/")) {
-        scriptUrl = `${ghproxy}${scriptUrl}`;
-      } else {
-        scriptUrl = `${ghproxy}/${scriptUrl}`;
-      }
-      if (!scriptUrl.startsWith("http")) {
-        scriptUrl = `http://${scriptUrl}`;
-      }
-    }
-
-    let finalCommand = "";
-    switch (selectedPlatform) {
-      case "linux":
-        finalCommand =
-          `wget -qO- ${quoteShellArg(scriptUrl)} | sudo bash -s -- ` +
-          quoteShellArgs(args);
-        break;
-      case "windows":
-        finalCommand =
-          `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ` +
-          `"iwr ${quotePowerShellArg(scriptUrl)}` +
-          ` -UseBasicParsing -OutFile 'install.ps1'; &` +
-          ` '.\\install.ps1'`;
-        args.forEach((arg) => {
-          finalCommand += ` ${quotePowerShellArg(arg)}`;
-        });
-        finalCommand += `"`;
-        break;
-      case "macos":
-        finalCommand =
-          `zsh <(curl -sL ${quoteShellArg(scriptUrl)}) ` +
-          quoteShellArgs(args);
-        break;
-      case "docker": {
-        // Docker 运行时不支持安装脚本专用参数，剔除它们及其取值
-        const installOnlyFlags = [
-          "--install-ghproxy",
-          "--install-dir",
-          "--install-service-name",
-          "--install-version",
-        ];
-        const dockerArgs: string[] = [];
-        for (let i = 0; i < args.length; i++) {
-          if (installOnlyFlags.includes(args[i])) {
-            i++; // 跳过该标志的取值
-            continue;
-          }
-          dockerArgs.push(args[i]);
-        }
-        // 自动发现会在 /app/auto-discovery.json 写入注册得到的 uuid/token，
-        // 通过 bind mount 持久化该文件，容器更新重建后复用同一身份，避免重复注册。
-        // 注意：文件挂载要求宿主机上文件已存在，否则 Docker 会将其创建为目录。
-        finalCommand =
-          `touch .komari-auto-discovery.json && ` +
-          `docker run -d --name komari-agent --restart=always ` +
-          `-v .komari-auto-discovery.json:/app/auto-discovery.json ` +
-          `ghcr.io/komari-monitor/komari-agent:latest ` +
-          quoteShellArgs(dockerArgs);
-        break;
-      }
-    }
-    return finalCommand;
+    const host = resolveScriptHost(settings?.script_domain);
+    const identityArgs = ["-e", host, "--auto-discovery", adKey];
+    const flagArgs = buildInstallFlagArgs(installOptions, {
+      enableGhproxy,
+      enableCustomDir,
+      enableCustomServiceName,
+      enableIncludeNics,
+      enableExcludeNics,
+      enableIncludeMountpoints,
+      enableInterval,
+      enableMonthRotate,
+      enableInstallVersion,
+    });
+    return buildInstallCommand(selectedPlatform, identityArgs, flagArgs, {
+      ghproxyEnabled: enableGhproxy,
+      ghproxy: installOptions.ghproxy,
+      persistAutoDiscoveryFile: true,
+    });
   };
 
   const copyToClipboard = async (text: string) => {
@@ -1508,23 +1343,6 @@ function DeleteButton({ node }: { node: NodeDetail }) {
     </Dialog.Root>
   );
 }
-type InstallOptions = {
-  disableWebSsh: boolean;
-  disableAutoUpdate: boolean;
-  ignoreUnsafeCert: boolean;
-  memoryIncludeCache: boolean;
-  getIpAddrFromNic: boolean;
-  enableGpu: boolean;
-  ghproxy: string;
-  dir: string;
-  serviceName: string;
-  includeNics: string;
-  excludeNics: string;
-  includeMountpoints: string;
-  interval: string;
-  monthRotate: string;
-  installVersion: string;
-};
 function GenerateCommandButton({
   node,
   settings,
@@ -1536,23 +1354,8 @@ function GenerateCommandButton({
 }) {
   const [selectedPlatform, setSelectedPlatform] =
     React.useState<Platform>("linux");
-  const [installOptions, setInstallOptions] = React.useState<InstallOptions>({
-    disableWebSsh: false,
-    disableAutoUpdate: false,
-    ignoreUnsafeCert: false,
-    memoryIncludeCache: false,
-    getIpAddrFromNic: false,
-    enableGpu: false,
-    ghproxy: "",
-    dir: "",
-    serviceName: "",
-    includeNics: "",
-    excludeNics: "",
-    includeMountpoints: "",
-    interval: "",
-    monthRotate: "",
-    installVersion: "",
-  });
+  const [installOptions, setInstallOptions] =
+    React.useState<AgentInstallOptions>(emptyAgentInstallOptions());
 
   const [enableGhproxy, setEnableGhproxy] = React.useState(false);
   const [enableCustomDir, setEnableCustomDir] = React.useState(false);
@@ -1579,151 +1382,23 @@ function GenerateCommandButton({
   }, [isSnapshotBackend]);
 
   const generateCommand = () => {
-    const host = function () {
-      if (!settings.script_domain) {
-        return window.location.origin;
-      }
-      if (settings.script_domain.startsWith("http")) {
-        return settings.script_domain.replace(/\/+$/, "");
-      }
-      return `http://${settings.script_domain.replace(/\/+$/, "")}`;
-    }();
-    const token = node.token || "";
-    let args = ["-e", host, "-t", token];
-    // 根据安装选项生成参数
-    if (installOptions.disableWebSsh) {
-      args.push("--disable-web-ssh");
-    }
-    if (installOptions.disableAutoUpdate) {
-      args.push("--disable-auto-update");
-    }
-    if (installOptions.ignoreUnsafeCert) {
-      args.push("--ignore-unsafe-cert");
-    }
-    if (installOptions.memoryIncludeCache) {
-      args.push("--memory-include-cache");
-    }
-    if (installOptions.getIpAddrFromNic) {
-      args.push("--get-ip-addr-from-nic");
-    }
-    if (installOptions.enableGpu) {
-      args.push("--gpu");
-    }
-    const ghproxy = installOptions.ghproxy.trim();
-    if (enableGhproxy && ghproxy) {
-      const finalUrl = (
-        ghproxy.startsWith("http")
-          ? ghproxy
-          : `http://${ghproxy}`
-      ).replace(/\/+$/, "");
-      args.push(`--install-ghproxy`);
-      args.push(finalUrl);
-    }
-    const installDir = installOptions.dir.trim();
-    if (enableCustomDir && installDir) {
-      args.push(`--install-dir`);
-      args.push(installDir);
-    }
-    const serviceName = installOptions.serviceName.trim();
-    if (enableCustomServiceName && serviceName) {
-      args.push(`--install-service-name`);
-      args.push(serviceName);
-    }
-    const installVersion = installOptions.installVersion.trim();
-    if (enableInstallVersion && installVersion) {
-      args.push(`--install-version`);
-      args.push(installVersion);
-    }
-    const includeNics = installOptions.includeNics.trim();
-    if (enableIncludeNics && includeNics) {
-      args.push(`--include-nics`);
-      args.push(includeNics);
-    }
-    const excludeNics = installOptions.excludeNics.trim();
-    if (enableExcludeNics && excludeNics) {
-      args.push(`--exclude-nics`);
-      args.push(excludeNics);
-    }
-    const includeMountpoints = installOptions.includeMountpoints.trim();
-    if (enableIncludeMountpoints && includeMountpoints) {
-      args.push(`--include-mountpoint`);
-      args.push(includeMountpoints);
-    }
-    if (enableInterval) {
-      const intervalVal = Number.parseFloat((installOptions.interval || "").trim());
-      args.push("-i");
-      args.push(Number.isFinite(intervalVal) && intervalVal >= 1 ? String(intervalVal) : "1");
-    }
-    if (enableMonthRotate) {
-      const rotateVal = (installOptions.monthRotate || "").trim() || "1"; // 默认 1
-      args.push(`--month-rotate`);
-      args.push(rotateVal);
-    }
-    let scriptFile = "install.sh";
-    if (selectedPlatform === "windows") {
-      scriptFile = "install.ps1";
-    }
-    let scriptUrl =
-      `https://raw.githubusercontent.com/komari-monitor/komari-agent/refs/heads/main/${scriptFile}`;
-    if (enableGhproxy) {
-      if (enableGhproxy && ghproxy) {
-        scriptUrl = scriptUrl.slice(8); // 去掉 https://
-        if (ghproxy.endsWith("/")) {
-          scriptUrl = `${ghproxy}${scriptUrl}`;
-        } else {
-          scriptUrl = `${ghproxy}/${scriptUrl}`;
-        }
-        if (!scriptUrl.startsWith("http")) {
-          scriptUrl = `http://${scriptUrl}`;
-        }
-      }
-    }
-    let finalCommand = "";
-    switch (selectedPlatform) {
-      case "linux":
-        finalCommand =
-          `wget -qO- ${quoteShellArg(scriptUrl)} | sudo bash -s -- ` +
-          quoteShellArgs(args);
-        break;
-      case "windows":
-        finalCommand =
-          `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ` +
-          `"iwr ${quotePowerShellArg(scriptUrl)}` +
-          ` -UseBasicParsing -OutFile 'install.ps1'; &` +
-          ` '.\\install.ps1'`;
-        args.forEach((arg) => {
-          finalCommand += ` ${quotePowerShellArg(arg)}`;
-        });
-        finalCommand += `"`;
-        break;
-      case "macos":
-        finalCommand =
-          `zsh <(curl -sL ${quoteShellArg(scriptUrl)}) ` + quoteShellArgs(args);
-        break;
-      case "docker": {
-        // Docker 运行时不支持安装脚本专用参数，剔除它们及其取值
-        const installOnlyFlags = [
-          "--install-ghproxy",
-          "--install-dir",
-          "--install-service-name",
-          "--install-version",
-        ];
-        const dockerArgs: string[] = [];
-        for (let i = 0; i < args.length; i++) {
-          if (installOnlyFlags.includes(args[i])) {
-            i++; // 跳过该标志的取值
-            continue;
-          }
-          dockerArgs.push(args[i]);
-        }
-        finalCommand =
-          `docker run -d --name komari-agent --restart=always ` +
-          `ghcr.io/komari-monitor/komari-agent:latest ` +
-          quoteShellArgs(dockerArgs);
-        break;
-      }
-    }
-    return finalCommand;
+    const host = resolveScriptHost(settings.script_domain);
+    const identityArgs = ["-e", host, "-t", node.token || ""];
+    const flagArgs = buildInstallFlagArgs(installOptions, {
+      enableGhproxy,
+      enableCustomDir,
+      enableCustomServiceName,
+      enableIncludeNics,
+      enableExcludeNics,
+      enableIncludeMountpoints,
+      enableInterval,
+      enableMonthRotate,
+      enableInstallVersion,
+    });
+    return buildInstallCommand(selectedPlatform, identityArgs, flagArgs, {
+      ghproxyEnabled: enableGhproxy,
+      ghproxy: installOptions.ghproxy,
+    });
   };
 
   const copyToClipboard = async (text: string) => {
@@ -2370,7 +2045,7 @@ function EditButton({ node }: { node: NodeDetail }) {
   const save = async () => {
     try {
       setSaving(true);
-      await fetch(`/api/admin/client/${node.uuid}/edit`, {
+      const response = await fetch(`/api/admin/client/${node.uuid}/edit`, {
         method: "POST",
         body: JSON.stringify({
           name: nameRef.current?.value,
@@ -2386,11 +2061,18 @@ function EditButton({ node }: { node: NodeDetail }) {
           "Content-Type": "application/json",
         },
       });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.message || `HTTP ${response.status}`);
+      }
       refresh();
       setOpen(false);
       toast.success(t("admin.nodeEdit.saveSuccess", "保存成功"));
     } catch (error) {
       console.error("Error updating client:", error);
+      toast.error(
+        error instanceof Error ? error.message : t("admin.nodeEdit.saveFailed", "保存失败")
+      );
     } finally {
       setSaving(false);
     }
@@ -2436,7 +2118,7 @@ function EditButton({ node }: { node: NodeDetail }) {
               </label>
               <Tips>
                 <span
-                  dangerouslySetInnerHTML={{ __html: t("common.tagsTips") }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeConfigHtml(t("common.tagsTips")) }}
                 />
               </Tips>
             </label>
@@ -2817,7 +2499,7 @@ function BillingButton({ node }: { node: NodeDetail }) {
         : null;
       const currencyValue = (formData.get("currency") as string) || "$";
 
-      await fetch(`/api/admin/client/${node.uuid}/edit`, {
+      const response = await fetch(`/api/admin/client/${node.uuid}/edit`, {
         method: "POST",
         body: JSON.stringify({
           price,
@@ -2830,6 +2512,10 @@ function BillingButton({ node }: { node: NodeDetail }) {
           "Content-Type": "application/json",
         },
       });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.message || `HTTP ${response.status}`);
+      }
       refresh();
       setOpen(false);
     } catch (error) {
@@ -2874,7 +2560,7 @@ function BillingButton({ node }: { node: NodeDetail }) {
             />
 
             <label className="font-bold flex items-center gap-1">
-              {t("admin.nodeTable.billingCycle")} <Tips><span dangerouslySetInnerHTML={{ __html: t("admin.nodeTable.billingCycleTips") }}></span></Tips>
+              {t("admin.nodeTable.billingCycle")} <Tips><span dangerouslySetInnerHTML={{ __html: sanitizeConfigHtml(t("admin.nodeTable.billingCycleTips")) }}></span></Tips>
             </label>
             <SelectOrInput
             options={[

@@ -67,24 +67,32 @@ export function stringToBytes(str: string): number {
     numericPart = "1";
   }
 
-  try {
-    // 3. 计算数值部分
-    // 使用 Function 构造函数来安全地评估可能包含乘法或科学记数法的表达式
-    // 注意：这仍然假设输入源是可信的，因为它能执行简单的数学运算
-    const value = new Function(`return ${numericPart}`)();
-
-    if (isNaN(value)) {
-      return 0;
-    }
-
-    // 4. 乘以单位对应的倍数
-    const multiplier = units[unit];
-    return Math.round(value * multiplier);
-  } catch (error) {
-    // 如果表达式无效（例如 "abc-gb"），则捕获错误并返回 0
-    console.error(`Error parsing string "${str}":`, error);
+  // 3. 计算数值部分（只支持数字、小数点、科学记数法与 '*' 乘法，不做任意表达式求值）
+  const value = evaluateNumericExpression(numericPart);
+  if (!Number.isFinite(value)) {
     return 0;
   }
+
+  // 4. 乘以单位对应的倍数
+  const multiplier = units[unit];
+  return Math.round(value * multiplier);
+}
+
+/**
+ * 计算形如 "128*1024" 或 "1e3" 的简单数值表达式，仅支持数字（含小数、
+ * 科学记数法）与 '*' 乘法，无法解析时返回 NaN。不使用 eval/Function
+ * 构造器，避免把调用方拼进来的字符串当作任意 JS 执行。
+ */
+function evaluateNumericExpression(expr: string): number {
+  if (!/^[0-9.eE+*-]+$/.test(expr)) {
+    return NaN;
+  }
+
+  return expr.split("*").reduce((product, term) => {
+    if (term === "") return NaN;
+    const value = Number(term);
+    return Number.isFinite(value) ? product * value : NaN;
+  }, 1);
 }
 
 export function formatBytes(bytes: number): string {

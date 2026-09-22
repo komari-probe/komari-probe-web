@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Button, Dialog, Flex, Text } from "@radix-ui/themes";
-import { updateSettingsWithToast, useSettings } from "@/shared/api/api";
+import { updateSettingsWithToast, useSettings } from "@/admin-ui/api/settings";
 import {
   SettingCardButton,
   SettingCardCollapse,
@@ -15,7 +15,7 @@ import Loading from "@/shared/components/loading";
 import { DownloadIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import UploadDialog from "@/admin-ui/components/UploadDialog";
-import { createChunkUploadTask, type ChunkUploadTask } from "@/shared/api/chunkUpload";
+import { createChunkUploadTask, type ChunkUploadTask } from "@/admin-ui/api/chunkUpload";
 
 export default function SiteSettings() {
   const { t } = useTranslation();

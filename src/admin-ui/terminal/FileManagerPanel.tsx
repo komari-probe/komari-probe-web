@@ -31,6 +31,7 @@ import {
 import {
   useCallback,
   lazy,
+  Suspense,
   useEffect,
   useRef,
   useState,
@@ -48,7 +49,10 @@ import {
   formatClipboardPath,
   fileDownloadUrl,
   copyTextToClipboard,
+  decodeRemoteDragPaths,
+  encodeRemoteDragPaths,
   getDroppedUploadFiles,
+  isInvalidMoveDestination,
   joinRemotePath,
   normalizeRemotePath,
   remoteBasename,
@@ -80,32 +84,6 @@ type DragTarget =
   | { kind: "blank" }
   | { kind: "directory"; path: string };
 
-const isWithinRemoteDirectory = (path: string, directory: string) => {
-  const source = normalizeRemotePath(path).replace(/\/$/, "");
-  const target = normalizeRemotePath(directory).replace(/\/$/, "");
-  if (source.toLowerCase() === target.toLowerCase()) return false;
-  return source.toLowerCase().startsWith(`${target}/`.toLowerCase());
-};
-
-const isInvalidMoveDestination = (source: string, destination: string) => {
-  const normalizedSource = normalizeRemotePath(source).replace(/\/$/, "");
-  const normalizedDestination = normalizeRemotePath(destination).replace(/\/$/, "");
-  return normalizedSource.toLowerCase() === normalizedDestination.toLowerCase()
-    || isWithinRemoteDirectory(destination, source);
-};
-
-const encodeRemoteDragPaths = (paths: string[]) =>
-  `komari-remote-paths:${JSON.stringify(paths)}`;
-
-const decodeRemoteDragPaths = (value: string): string[] | null => {
-  if (!value.startsWith("komari-remote-paths:")) return null;
-  try {
-    const paths = JSON.parse(value.slice("komari-remote-paths:".length));
-    return Array.isArray(paths) ? paths.filter((path): path is string => typeof path === "string") : null;
-  } catch {
-    return null;
-  }
-};
 
 type ClipboardState = {
   paths: string[];
@@ -1125,16 +1103,18 @@ const FileManagerPanel = ({ uuid }: FileManagerPanelProps) => {
         }}
       />
       {editorOpen && (
-        <FileEditorDialog
-          open
-          uuid={uuid}
-          initialFile={editorFile}
-          initialLine={editorLine}
-          refreshToken={refreshToken}
-          onOpenChange={setEditorOpen}
-          onSaved={() => void refresh()}
-          onChanged={() => void refresh()}
-        />
+        <Suspense fallback={null}>
+          <FileEditorDialog
+            open
+            uuid={uuid}
+            initialFile={editorFile}
+            initialLine={editorLine}
+            refreshToken={refreshToken}
+            onOpenChange={setEditorOpen}
+            onSaved={() => void refresh()}
+            onChanged={() => void refresh()}
+          />
+        </Suspense>
       )}
       <FileContextMenu
         open={contextMenuOpen}

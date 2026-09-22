@@ -7,7 +7,7 @@ import {
   Separator,
   IconButton,
 } from "@radix-ui/themes";
-import type { LiveData, Record } from "@/default-theme/types/LiveData";
+import type { LiveData, NodeLiveRecord } from "@/default-theme/types/LiveData";
 import UsageBar from "@/default-theme/components/UsageBar";
 import Flag from "@/shared/components/Flag";
 import { useTranslation } from "react-i18next";
@@ -32,7 +32,7 @@ export function formatUptime(seconds: number, t: TFunction): string {
 
 interface NodeProps {
   basic: NodeBasicInfo;
-  live: Record | undefined;
+  live: NodeLiveRecord | undefined;
   online: boolean;
   isMobile: boolean;
   showIpTagsInCard: boolean;
@@ -49,7 +49,7 @@ const DEFAULT_NODE_LIVE = {
   process: 0,
   message: "",
   updated_at: "",
-} as Record;
+} as NodeLiveRecord;
 
 const Node = React.memo(
   ({ basic, live, online, isMobile, showIpTagsInCard }: NodeProps) => {

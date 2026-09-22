@@ -1,7 +1,7 @@
 import Loading from "@/shared/components/loading";
 import { useAdminNavigation } from "@/admin-ui/contexts/AdminNavigationContext";
 import { usePublicInfo } from "@/shared/contexts/PublicInfoContext";
-import { useSettings } from "@/shared/api/api";
+import { useSettings } from "@/admin-ui/api/settings";
 import { resolveI18nText, type I18nText } from "@/admin-ui/utils/i18nText";
 import {
   Badge,
@@ -33,21 +33,13 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
-interface MarketSource {
-  id: string;
-  name: string;
-  url: string;
-  enabled: boolean;
-}
-
-interface MarketSourceStatus {
-  id: string;
-  name: string;
-  url: string;
-  count: number;
-  error?: string;
-}
+import {
+  emptyMarketSource,
+  isVersionNewer,
+  requestMarketAPI,
+  type MarketSource,
+  type MarketSourceStatus,
+} from "@/admin-ui/api/market";
 
 interface MarketTheme {
   name: I18nText;
@@ -69,41 +61,6 @@ interface InstalledTheme {
   version: string;
 }
 
-interface APIResponse<T> {
-  status: string;
-  message?: string;
-  data: T;
-}
-
-const emptySource = (): Omit<MarketSource, "id"> => ({
-  name: "",
-  url: "",
-  enabled: true,
-});
-
-function isVersionNewer(candidate: string, installed: string) {
-  const parse = (value: string) => {
-    const match = value.trim().replace(/^v/i, "").match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
-    return match ? [Number(match[1]), Number(match[2] || 0), Number(match[3] || 0)] : null;
-  };
-  const next = parse(candidate);
-  const current = parse(installed);
-  if (!next || !current) return candidate !== installed;
-  for (let index = 0; index < next.length; index += 1) {
-    if (next[index] !== current[index]) return next[index] > current[index];
-  }
-  return false;
-}
-
-async function request<T>(input: RequestInfo | URL, init?: RequestInit) {
-  const response = await fetch(input, init);
-  const payload = (await response.json().catch(() => null)) as APIResponse<T> | null;
-  if (!response.ok || !payload || payload.status === "error") {
-    throw new Error(payload?.message || `HTTP ${response.status}`);
-  }
-  return payload;
-}
-
 export default function ThemeMarketPage() {
   const { t, i18n } = useTranslation();
   const [themes, setThemes] = useState<MarketTheme[]>([]);
@@ -116,7 +73,7 @@ export default function ThemeMarketPage() {
   const [installing, setInstalling] = useState<string | null>(null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [editingID, setEditingID] = useState<string | null>(null);
-  const [sourceForm, setSourceForm] = useState(emptySource());
+  const [sourceForm, setSourceForm] = useState(emptyMarketSource());
   const [savingSource, setSavingSource] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState<MarketTheme | null>(null);
   const [themeToUninstall, setThemeToUninstall] = useState<MarketTheme | null>(null);
@@ -134,17 +91,17 @@ export default function ThemeMarketPage() {
   );
 
   const loadSources = useCallback(async () => {
-    const payload = await request<MarketSource[]>("/api/admin/theme/market/sources");
+    const payload = await requestMarketAPI<MarketSource[]>("/api/admin/theme/market/sources");
     setSources(payload.data || []);
   }, []);
 
   const loadCatalog = useCallback(async (force = false) => {
     const suffix = force ? "?refresh=true" : "";
     const [catalogPayload, installedPayload] = await Promise.all([
-      request<{ themes: MarketTheme[]; sources: MarketSourceStatus[] }>(
+      requestMarketAPI<{ themes: MarketTheme[]; sources: MarketSourceStatus[] }>(
         `/api/admin/theme/market/catalog${suffix}`,
       ),
-      request<InstalledTheme[]>("/api/admin/theme/list"),
+      requestMarketAPI<InstalledTheme[]>("/api/admin/theme/list"),
     ]);
     setThemes(catalogPayload.data?.themes || []);
     setSourceStatuses(catalogPayload.data?.sources || []);
@@ -186,7 +143,7 @@ export default function ThemeMarketPage() {
     const key = `${theme.source_id}:${theme.short}`;
     setInstalling(key);
     try {
-      const payload = await request("/api/admin/theme/market/install", {
+      const payload = await requestMarketAPI("/api/admin/theme/market/install", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ source_id: theme.source_id, short: theme.short }),
@@ -207,7 +164,7 @@ export default function ThemeMarketPage() {
   const setActiveTheme = async (theme: MarketTheme) => {
     setSettingTheme(theme.short);
     try {
-      await request(`/api/admin/theme/set?theme=${encodeURIComponent(theme.short)}`);
+      await requestMarketAPI(`/api/admin/theme/set?theme=${encodeURIComponent(theme.short)}`);
       await refetchSettings();
       await refreshPublicInfo();
       refreshNavigation();
@@ -224,9 +181,9 @@ export default function ThemeMarketPage() {
     try {
       const wasActive = currentTheme === theme.short;
       if (wasActive) {
-        await request("/api/admin/theme/set?theme=default");
+        await requestMarketAPI("/api/admin/theme/set?theme=default");
       }
-      await request("/api/admin/theme/delete", {
+      await requestMarketAPI("/api/admin/theme/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ short: theme.short }),
@@ -247,7 +204,7 @@ export default function ThemeMarketPage() {
 
   const startCreateSource = () => {
     setEditingID(null);
-    setSourceForm(emptySource());
+    setSourceForm(emptyMarketSource());
   };
 
   const startEditSource = (source: MarketSource) => {
@@ -259,7 +216,7 @@ export default function ThemeMarketPage() {
     if (!sourceForm.name.trim() || !sourceForm.url.trim()) return;
     setSavingSource(true);
     try {
-      await request(
+      await requestMarketAPI(
         editingID
           ? `/api/admin/theme/market/sources/${encodeURIComponent(editingID)}`
           : "/api/admin/theme/market/sources",
@@ -285,7 +242,7 @@ export default function ThemeMarketPage() {
 
   const updateSourceEnabled = async (source: MarketSource, enabled: boolean) => {
     try {
-      await request(`/api/admin/theme/market/sources/${encodeURIComponent(source.id)}`, {
+      await requestMarketAPI(`/api/admin/theme/market/sources/${encodeURIComponent(source.id)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...source, enabled }),
@@ -298,7 +255,7 @@ export default function ThemeMarketPage() {
 
   const deleteSource = async (source: MarketSource) => {
     try {
-      await request(`/api/admin/theme/market/sources/${encodeURIComponent(source.id)}`, {
+      await requestMarketAPI(`/api/admin/theme/market/sources/${encodeURIComponent(source.id)}`, {
         method: "DELETE",
       });
       if (editingID === source.id) startCreateSource();

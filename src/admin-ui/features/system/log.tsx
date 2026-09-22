@@ -51,7 +51,7 @@ const LogPage = () => {
       }
     };
     fetchLogs();
-  }, [page]);
+  }, [page, limit]);
 
   const totalPages = Math.ceil(total / limit);
   // 计算分页页码，显示当前页及前后1页，两端省略号
@@ -101,7 +101,10 @@ const LogPage = () => {
           Limit
           <NumberPicker
             defaultValue={limit}
-            onChange={setLimit}
+            onChange={(value) => {
+              setLimit(value);
+              setPage(1);
+            }}
             min={1}
             max={100}
           />

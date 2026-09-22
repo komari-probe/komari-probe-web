@@ -4,95 +4,40 @@ import {
   SettingCardShortTextInput,
   SettingCardSwitch,
 } from "@/admin-ui/components/SettingCard";
-import { updateSettingsWithToast, useSettings } from "@/shared/api/api";
+import { updateSettingsWithToast, useSettings } from "@/admin-ui/api/settings";
 import { Button, Text } from "@radix-ui/themes";
 import { useTranslation } from "react-i18next";
 import Loading from "@/shared/components/loading";
 import React from "react";
 import { renderProviderInputs } from "@/admin-ui/utils/renderProviders";
 import { toast } from "sonner";
+import { useProviderRegistry } from "@/admin-ui/hooks/useProviderRegistry";
+import { generateRandomKey } from "@/admin-ui/utils/randomKey";
 
 export default function SignOnSettings() {
   const { t } = useTranslation();
   const { settings, loading, error } = useSettings();
-  const [providerDefs, setProviderDefs] = React.useState<any>({});
-  const [providerList, setProviderList] = React.useState<string[]>([]);
-  const [currentProvider, setCurrentProvider] = React.useState<string>("");
-  const [providerValues, setProviderValues] = React.useState<any>({});
-  const [providerLoading, setProviderLoading] = React.useState(false);
-  const [providerError, setProviderError] = React.useState("");
-
-
-  // 拉取所有 provider 及字段定义
-  React.useEffect(() => {
-    if (loading) return;
-    setProviderLoading(true);
-    fetch("/api/admin/settings/oidc")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.status === "success" && data.data) {
-          setProviderDefs(data.data);
-          const providers = Object.keys(data.data);
-          setProviderList(providers);
-          const initialProvider =
-            settings.o_auth_provider && providers.includes(settings.o_auth_provider)
-              ? settings.o_auth_provider
-              : "";
-          setCurrentProvider(initialProvider);
-        } else {
-          setProviderError(data.message || t("settings.sso.provider_fetch_failed"));
-        }
-      })
-      .catch(() => setProviderError(t("settings.sso.provider_fetch_failed")))
-      .finally(() => setProviderLoading(false));
-  }, [loading, settings.o_auth_provider, t]);
-
-  // 拉取当前 provider 的设置
-  React.useEffect(() => {
-    if (!currentProvider) return;
-    setProviderLoading(true);
-    fetch(`/api/admin/settings/oidc?provider=${currentProvider}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.status === "success" && data.data) {
-          try {
-            setProviderValues(JSON.parse(data.data.addition || "{}"));
-          } catch {
-            setProviderValues({});
-          }
-        } else {
-          setProviderError(data.message || t("settings.sso.provider_settings_fetch_failed"));
-        }
-      })
-      .catch(() => setProviderError(t("settings.sso.provider_settings_fetch_failed")))
-      .finally(() => setProviderLoading(false));
-  }, [currentProvider, t]);
-
-  // 处理保存
-  const handleOidcSave = async (values: any) => {
-    setProviderLoading(true);
-    setProviderError("");
-    const body = {
-      name: currentProvider,
-      addition: JSON.stringify(values),
-    };
-    try {
-      const res = await fetch("/api/admin/settings/oidc", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (data.status !== "success") {
-        setProviderError(data.message || t("settings.sso.provider_save_failed"));
-      } else {
-        setProviderValues(values);
-      }
-    } catch {
-      setProviderError(t("settings.sso.provider_save_failed"));
-    }
-    setProviderLoading(false);
-  };
+  const {
+    providerDefs,
+    providerList,
+    currentProvider,
+    setCurrentProvider,
+    providerValues,
+    setProviderValues,
+    providerLoading,
+    providerError,
+    save: handleOidcSave,
+  } = useProviderRegistry({
+    listUrl: "/api/admin/settings/oidc",
+    valuesUrl: (provider) => `/api/admin/settings/oidc?provider=${provider}`,
+    saveUrl: "/api/admin/settings/oidc",
+    activeProvider: settings.o_auth_provider,
+    settingsLoading: loading,
+    fetchListErrorMessage: t("settings.sso.provider_fetch_failed"),
+    fetchValuesErrorMessage: t("settings.sso.provider_settings_fetch_failed"),
+    saveErrorMessage: t("settings.sso.provider_save_failed"),
+    saveSuccessMessage: t("common.success"),
+  });
 
   // 渲染 provider 的输入项已抽象到 utils/renderProviders.tsx 中
 
@@ -161,20 +106,9 @@ const ApiCard = () => {
   const { t } = useTranslation();
   const [apiValues, setApiValues] = React.useState<string>(settings?.api_key || "" );
 
-  // 生成32位随机字符串
-  const generateRandomString = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = 'komari-';
-    for (let i = 0; i < 32; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-  };
-
   // 处理生成按钮点击
   const handleGenerateApiKey = () => {
-    const newApiKey = generateRandomString();
-    setApiValues(newApiKey);
+    setApiValues(generateRandomKey(32, "komari-"));
   };
 
   // 初始化API值

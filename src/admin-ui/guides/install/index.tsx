@@ -23,7 +23,7 @@ import {
 import { useTranslation } from "react-i18next";
 import GuideHeader from "@/admin-ui/components/GuideHeader";
 import UploadDialog from "@/admin-ui/components/UploadDialog";
-import { createChunkUploadTask, type ChunkUploadTask } from "@/shared/api/chunkUpload";
+import { createChunkUploadTask, type ChunkUploadTask } from "@/admin-ui/api/chunkUpload";
 import { isSQLiteDSN } from "@/admin-ui/utils/metric";
 
 type APIResponse<T> = {

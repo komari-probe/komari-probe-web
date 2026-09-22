@@ -9,7 +9,7 @@ import {
 } from "@radix-ui/themes";
 import { useTranslation } from "react-i18next";
 import { TablerSettings } from "@/shared/ui/Icones/Tabler";
-import { AccountProvider, useAccount } from "@/shared/auth/AccountContext";
+import { useAccount } from "@/shared/auth/AccountContext";
 import { usePublicInfo } from "@/shared/contexts/PublicInfoContext";
 
 type LoginDialogProps = {
@@ -20,8 +20,8 @@ type LoginDialogProps = {
   onLoginSuccess?: () => void;
 };
 
+/** Must be rendered inside an AccountProvider ancestor. */
 const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onLoginSuccess }: LoginDialogProps) => {
-  const InnerLayout = () => {
     const { account, loading, error, refresh } = useAccount();
     const [t] = useTranslation();
     const [username, setUsername] = React.useState("");
@@ -261,12 +261,6 @@ const LoginDialog = ({ trigger, autoOpen = false, showSettings = true, info, onL
           </form>
         </Dialog.Content>
       </Dialog.Root>
-    );
-  };
-  return (
-    <AccountProvider>
-      <InnerLayout />
-    </AccountProvider>
   );
 };
 

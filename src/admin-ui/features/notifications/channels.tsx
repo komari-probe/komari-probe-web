@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Text } from "@radix-ui/themes";
-import { updateSettingsWithToast, useSettings } from "@/shared/api/api";
+import { updateSettingsWithToast, useSettings } from "@/admin-ui/api/settings";
 import {
   SettingCardButton,
   SettingCardLabel,
@@ -10,92 +10,36 @@ import {
 } from "@/admin-ui/components/SettingCard";
 import { toast } from "sonner";
 import Loading from "@/shared/components/loading";
-import React from "react";
 import { renderProviderInputs } from "@/admin-ui/utils/renderProviders";
 import { SquareArrowOutUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useProviderRegistry } from "@/admin-ui/hooks/useProviderRegistry";
 
 const NotificationSettings = () => {
   const { t } = useTranslation();
   const { settings, loading, error } = useSettings();
-  const [messageDefs, setMessageDefs] = React.useState<any>({});
-  const [messageList, setMessageList] = React.useState<string[]>([]);
-  const [currentMessageSender, setCurrentMessageSender] = React.useState<string>("");
-  const [messageValues, setMessageValues] = React.useState<any>({});
-  const [messageLoading, setMessageLoading] = React.useState(false);
-  const [messageError, setMessageError] = React.useState("");
+  const {
+    providerDefs: messageDefs,
+    providerList: messageList,
+    currentProvider: currentMessageSender,
+    setCurrentProvider: setCurrentMessageSender,
+    providerValues: messageValues,
+    setProviderValues: setMessageValues,
+    providerLoading: messageLoading,
+    providerError: messageError,
+    save: handleMessageSave,
+  } = useProviderRegistry({
+    listUrl: "/api/admin/settings/message-sender",
+    valuesUrl: (provider) => `/api/admin/settings/message-sender?provider=${provider}`,
+    saveUrl: "/api/admin/settings/message-sender",
+    activeProvider: settings.notification_method,
+    settingsLoading: loading,
+    fetchListErrorMessage: t("settings.notification.provider_fetch_failed"),
+    fetchValuesErrorMessage: t("settings.notification.provider_settings_fetch_failed"),
+    saveErrorMessage: t("common.error"),
+    saveSuccessMessage: t("common.success"),
+  });
 
-  // 拉取所有 message sender 及字段定义
-  React.useEffect(() => {
-    if (loading) return;
-    setMessageLoading(true);
-    fetch("/api/admin/settings/message-sender")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.status === "success" && data.data) {
-          setMessageDefs(data.data);
-          const senders = Object.keys(data.data);
-          setMessageList(senders);
-          const initialSender =
-            settings.notification_method && senders.includes(settings.notification_method)
-              ? settings.notification_method
-              : "";
-          setCurrentMessageSender(initialSender);
-        } else {
-          setMessageError(data.message || t("settings.notification.provider_fetch_failed"));
-        }
-      })
-      .catch(() => setMessageError(t("settings.notification.provider_fetch_failed")))
-      .finally(() => setMessageLoading(false));
-  }, [loading, settings.notification_method, t]);
-
-  // 拉取当前 message sender 的设置
-  React.useEffect(() => {
-    if (!currentMessageSender) return;
-    setMessageLoading(true);
-    fetch(`/api/admin/settings/message-sender?provider=${currentMessageSender}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.status === "success" && data.data) {
-          try {
-            setMessageValues(JSON.parse(data.data.addition || "{}"));
-          } catch {
-            setMessageValues({});
-          }
-        } else {
-          setMessageError(data.message || t("settings.notification.provider_settings_fetch_failed"));
-        }
-      })
-      .catch(() => setMessageError(t("settings.notification.provider_settings_fetch_failed")))
-      .finally(() => setMessageLoading(false));
-  }, [currentMessageSender, t]);
-
-  // 处理保存
-  const handleMessageSave = async (values: any) => {
-    setMessageLoading(true);
-    setMessageError("");
-    const body = {
-      name: currentMessageSender,
-      addition: JSON.stringify(values),
-    };
-    try {
-      const res = await fetch("/api/admin/settings/message-sender", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (data.status !== "success") {
-        throw new Error(data.message || t("common.error"));
-      } else {
-        setMessageValues(values);
-      }
-      toast.success(t("common.success"));
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
-    }
-    setMessageLoading(false);
-  };
   if (loading || (!messageLoading && messageList.length === 0 && !messageError)) {
     return <Loading />;
   }

@@ -18,6 +18,7 @@ import {
   useXtermjsSettings,
 } from "@/admin-ui/hooks/useXtermjsSettings";
 import type { XtermjsSettings } from "@/admin-ui/hooks/useXtermjsSettings";
+import { useTwoFaStatus } from "@/admin-ui/hooks/useTwoFaStatus";
 import type { TerminalSessionApi } from "./TerminalSession";
 import {
   createTab,
@@ -64,8 +65,7 @@ export const useTerminalPage = () => {
   const [httpsCalloutOpen, setHttpsCalloutOpen] = useState(
     window.location.protocol !== "https:",
   );
-  const [twoFaEnabled, setTwoFaEnabled] = useState(false);
-  const [twoFaResolved, setTwoFaResolved] = useState(false);
+  const { enabled: twoFaEnabled, resolved: twoFaResolved } = useTwoFaStatus();
 
   // Search state
   const [searchOpen, setSearchOpen] = useState(false);
@@ -164,30 +164,6 @@ export const useTerminalPage = () => {
       mounted = false;
     };
   }, [t, updateTabs]);
-
-  useEffect(() => {
-    let mounted = true;
-    fetch("/api/me")
-      .then((response) => response.json())
-      .then((data: { "2fa_enabled"?: boolean }) => {
-        if (!mounted) {
-          return;
-        }
-        const enabled = Boolean(data?.["2fa_enabled"]);
-        setTwoFaEnabled(enabled);
-        setTwoFaResolved(true);
-      })
-      .catch(() => {
-        if (!mounted) {
-          return;
-        }
-        setTwoFaResolved(true);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (tabs.length === 0) {

@@ -4,7 +4,7 @@ import {
   updateSettingsWithToast,
   useSettings,
   type SettingsResponse,
-} from "@/shared/api/api";
+} from "@/admin-ui/api/settings";
 import {
   SettingCardButton,
   SettingCardCollapse,
@@ -16,6 +16,7 @@ import {
 import React from "react";
 import { toast } from "sonner";
 import Loading from "@/shared/components/loading";
+import { generateRandomKey } from "@/admin-ui/utils/randomKey";
 
 export default function GeneralSettings() {
   const { t } = useTranslation();
@@ -23,6 +24,7 @@ export default function GeneralSettings() {
   const [geoip_testResult, setGeoipTestResult] = React.useState<string | null>(
     null
   );
+  const [geoipTestIp, setGeoipTestIp] = React.useState("");
   if (loading) {
     return <Loading text="creeper?" />;
   }
@@ -86,17 +88,18 @@ export default function GeneralSettings() {
         description={t("settings.geoip.test_description")}
       >
         <Flex className="w-full gap-2" direction="column">
-          <TextField.Root placeholder="1.1.1.1 or 2606:4700:4700::1111"></TextField.Root>
+          <TextField.Root
+            placeholder="1.1.1.1 or 2606:4700:4700::1111"
+            value={geoipTestIp}
+            onChange={(event) => setGeoipTestIp(event.target.value)}
+          ></TextField.Root>
           <div>
             <Button
               variant="solid"
               onClick={async () => {
-                const ip = (
-                  document.querySelector(
-                    "input[placeholder]"
-                  ) as HTMLInputElement
-                ).value;
-                const result = await fetch(`/api/admin/test/geoip?ip=${ip}`);
+                const result = await fetch(
+                  `/api/admin/test/geoip?ip=${encodeURIComponent(geoipTestIp)}`
+                );
                 const data = await result.json();
                 setGeoipTestResult(
                   JSON.stringify(data.data, null, 2) || t("common.no_results")
@@ -130,21 +133,9 @@ const ApiCard = ({ settings }: { settings: SettingsResponse }) => {
     settings?.auto_discovery_key || ""
   );
 
-  // 生成32位随机字符串
-  const generateRandomString = () => {
-    const chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let result = "";
-    for (let i = 0; i < 24; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-  };
-
   // 处理生成按钮点击
   const handleGenerateApiKey = () => {
-    const newApiKey = generateRandomString();
-    setApiValues(newApiKey);
+    setApiValues(generateRandomKey(24));
   };
 
   // 初始化API值

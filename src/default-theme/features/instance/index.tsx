@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useLiveData } from "../../state/LiveDataContext";
 import { useTranslation } from "react-i18next";
-import type { Record } from "@/default-theme/types/LiveData";
+import type { NodeLiveRecord } from "@/default-theme/types/LiveData";
 import Flag from "@/shared/components/Flag";
 import { Card, Flex, Text } from "@radix-ui/themes";
 import { useNodeList } from "@/shared/contexts/NodeListContext";
@@ -18,7 +18,7 @@ export default function InstancePage() {
   const navigate = useNavigate();
   const { onRefresh, live_data } = useLiveData();
   const { uuid } = useParams<{ uuid: string }>();
-  const [recent, setRecent] = useState<Record[]>([]);
+  const [recent, setRecent] = useState<NodeLiveRecord[]>([]);
   const [chartRealtimeActive, setChartRealtimeActive] = useState(true);
   const { nodeList } = useNodeList();
   const length = 30 * 5;
@@ -132,7 +132,7 @@ export default function InstancePage() {
       if (!data) return;
 
       setRecent((prev) => {
-        const newRecord: Record = data;
+        const newRecord: NodeLiveRecord = data;
         // 追加新数据，限制总长度为length（FIFO）
         // 检查是否已存在相同时间戳的记录
         const exists = prev.some(

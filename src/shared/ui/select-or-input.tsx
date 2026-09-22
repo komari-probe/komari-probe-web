@@ -55,6 +55,7 @@ export function SelectOrInput<T extends Primitive = string>(
     onChange,
     placeholder,
     allowCustomInput,
+    allowCustomValue,
     className,
     listClassName,
     optionClassName,
@@ -111,7 +112,7 @@ export function SelectOrInput<T extends Primitive = string>(
   const [open, setOpen] = React.useState(false);
   const [highlightIndex, setHighlightIndex] = React.useState<number>(-1);
 
-  const allowCustom = (allowCustomInput ?? true) === true;
+  const allowCustom = (allowCustomInput ?? allowCustomValue ?? true) === true;
 
   const filtered = React.useMemo(() => {
     const text = (inputValue ?? "").trim().toLowerCase();

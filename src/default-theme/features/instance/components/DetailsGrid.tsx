@@ -8,7 +8,7 @@ import { useLiveData } from "@/default-theme/state/LiveDataContext";
 import { formatUptime } from "@/default-theme/features/overview/components/Node";
 import { formatBytes } from "@/shared/utils/unitHelper";
 import { Flex, Text, Card } from "@radix-ui/themes";
-import type { Record as LiveRecord } from "@/default-theme/types/LiveData";
+import type { NodeLiveRecord as LiveRecord } from "@/default-theme/types/LiveData";
 
 type DetailsGridProps = {
   uuid: string;

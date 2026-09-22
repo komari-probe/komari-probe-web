@@ -361,23 +361,27 @@ const TwoFactorDisabled = () => {
   const [code, setCode] = React.useState<string>("");
 
   React.useEffect(() => {
-    if (isOpen) {
-      setIsLoading(true);
-      fetch("/api/admin/2fa/generate")
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(t("account.qr_fetch_error"));
-          }
-          return response.blob();
-        })
-        .then((blob) => {
-          const url = URL.createObjectURL(blob);
-          setQRCode(url);
-        })
-        .catch((err) => toast.error(err.message))
-        .finally(() => setIsLoading(false));
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+    let objectUrl: string | null = null;
+    setIsLoading(true);
+    fetch("/api/admin/2fa/generate")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(t("account.qr_fetch_error"));
+        }
+        return response.blob();
+      })
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(blob);
+        setQRCode(objectUrl);
+      })
+      .catch((err) => toast.error(err.message))
+      .finally(() => setIsLoading(false));
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [isOpen, t]);
 
   const handleEnable2fa = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
