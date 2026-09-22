@@ -441,8 +441,18 @@ const AdminPanelBar = ({ content }: AdminPanelBarProps) => {
               >
                 <TablerMenu2 />
               </IconButton>
-              <a href="/" target="_blank" rel="noopener noreferrer">
-                <label className="text-xl font-bold">Sonar</label>
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2"
+              >
+                <img
+                  src="/assets/pwa-icon.webp"
+                  alt="Sonar"
+                  className="size-6 object-contain"
+                />
+                <label className="text-xl font-bold cursor-pointer">Sonar</label>
               </a>
               {updateAvailable && releasesSince.length > 0 && (
                 <Tips
