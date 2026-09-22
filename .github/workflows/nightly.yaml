@@ -46,11 +46,20 @@ jobs:
           NIGHTLY_COMMIT: ${{ steps.version.outputs.commit }}
         run: |
           set -euo pipefail
-          jq --arg version "${NIGHTLY_TAG}" \
-             --arg desc "Nightly preview build of Komari Web (commit: ${NIGHTLY_COMMIT})" \
-             '.version = $version | .description = $desc' \
-             komari-theme.json > komari-theme.nightly.json
-          mv komari-theme.nightly.json komari-theme.json
+          if [ -f sonar-theme.json ]; then
+            jq --arg version "${NIGHTLY_TAG}" \
+               --arg desc "Nightly preview build of Sonar Web (commit: ${NIGHTLY_COMMIT})" \
+               '.version = $version | .description = $desc' \
+               sonar-theme.json > sonar-theme.nightly.json
+            mv sonar-theme.nightly.json sonar-theme.json
+          fi
+          if [ -f komari-theme.json ]; then
+            jq --arg version "${NIGHTLY_TAG}" \
+               --arg desc "Nightly preview build of Sonar Web (commit: ${NIGHTLY_COMMIT})" \
+               '.version = $version | .description = $desc' \
+               komari-theme.json > komari-theme.nightly.json
+            mv komari-theme.nightly.json komari-theme.json
+          fi
 
       - name: Package release asset
         run: |
@@ -58,8 +67,9 @@ jobs:
           rm -f dist-release.zip
           rm -rf release-package
           mkdir -p release-package
-          cp preview.webp release-package/
-          cp komari-theme.json release-package/
+          if [ -f preview.webp ]; then cp preview.webp release-package/; fi
+          if [ -f sonar-theme.json ]; then cp sonar-theme.json release-package/; fi
+          if [ -f komari-theme.json ]; then cp komari-theme.json release-package/; fi
           cp -r dist release-package/
           cd release-package
           zip -qr ../dist-release.zip .
@@ -92,7 +102,7 @@ jobs:
           done
 
           {
-            echo "### Komari Web nightly preview"
+            echo "### Sonar Web nightly preview"
             echo
             echo "Published ${NIGHTLY_TAG} from commit ${NIGHTLY_COMMIT}."
           } >> "$GITHUB_STEP_SUMMARY"

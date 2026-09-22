@@ -1,10 +1,10 @@
-name: Follow Komari Release
+name: Follow Sonar Release
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Komari release tag to mirror. Leave empty to use the latest stable release."
+        description: "Sonar release tag to mirror. Leave empty to use the latest stable release."
         required: false
         type: string
       force:
@@ -14,6 +14,7 @@ on:
         type: boolean
   repository_dispatch:
     types:
+      - sonar-release-published
       - komari-release-published
   schedule:
     - cron: "17 * * * *"
@@ -22,7 +23,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: follow-komari-release-${{ github.event.inputs.tag || github.event.client_payload.tag || 'latest' }}
+  group: follow-sonar-release-${{ github.event.inputs.tag || github.event.client_payload.tag || 'latest' }}
   cancel-in-progress: false
 
 jobs:
@@ -40,7 +41,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Resolve Komari release
+      - name: Resolve Sonar release
         id: release
         shell: bash
         run: |
@@ -52,16 +53,16 @@ jobs:
           fi
 
           if [ -z "$tag" ]; then
-            tag="$(gh api repos/komari-monitor/komari/releases --jq '[.[] | select(.draft == false and .prerelease == false)][0].tag_name')"
+            tag="$(gh api repos/sonar-probe/sonar/releases --jq '[.[] | select(.draft == false and .prerelease == false)][0].tag_name')"
           fi
 
           if [ -z "$tag" ] || [ "$tag" = "null" ]; then
-            echo "Unable to resolve a Komari release tag." >&2
+            echo "Unable to resolve a Sonar release tag." >&2
             exit 1
           fi
 
-          main_url="$(gh release view "$tag" --repo komari-monitor/komari --json url --jq .url)"
-          main_published_at="$(gh release view "$tag" --repo komari-monitor/komari --json publishedAt --jq .publishedAt)"
+          main_url="$(gh release view "$tag" --repo sonar-probe/sonar --json url --jq .url)"
+          main_published_at="$(gh release view "$tag" --repo sonar-probe/sonar --json publishedAt --jq .publishedAt)"
 
           release_exists="false"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
@@ -79,7 +80,7 @@ jobs:
         shell: bash
         run: |
           {
-            echo "### Komari Web release"
+            echo "### Sonar Web release"
             echo
             echo "Release ${{ steps.release.outputs.tag }} already exists. Nothing to do."
           } >> "$GITHUB_STEP_SUMMARY"
@@ -107,8 +108,9 @@ jobs:
           rm -f dist-release.zip
           rm -rf release-package
           mkdir -p release-package
-          cp preview.webp release-package/
-          cp komari-theme.json release-package/
+          if [ -f preview.webp ]; then cp preview.webp release-package/; fi
+          if [ -f sonar-theme.json ]; then cp sonar-theme.json release-package/; fi
+          if [ -f komari-theme.json ]; then cp komari-theme.json release-package/; fi
           cp -r dist release-package/
           cd release-package
           zip -qr ../dist-release.zip .
@@ -245,37 +247,37 @@ jobs:
           fi
 
           {
-            echo "### Komari Web release"
+            echo "### Sonar Web release"
             echo
             echo "Published $tag following ${{ steps.release.outputs.main_url }}."
             echo
             echo "Asset: \`dist-release.zip\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Refresh Komari release notes
+      - name: Refresh Sonar release notes
         if: steps.release.outputs.exists != 'true' || steps.release.outputs.force == 'true'
         shell: bash
         env:
-          KOMARI_RELEASE_NOTES_TOKEN: ${{ secrets.KOMARI_RELEASE_NOTES_TOKEN }}
+          SONAR_RELEASE_NOTES_TOKEN: ${{ secrets.SONAR_RELEASE_NOTES_TOKEN || secrets.KOMARI_RELEASE_NOTES_TOKEN }}
         run: |
           set -euo pipefail
 
-          if [ -z "${KOMARI_RELEASE_NOTES_TOKEN:-}" ]; then
+          if [ -z "${SONAR_RELEASE_NOTES_TOKEN:-}" ]; then
             {
               echo
-              echo "Skipped Komari release note refresh because KOMARI_RELEASE_NOTES_TOKEN is not configured."
+              echo "Skipped Sonar release note refresh because SONAR_RELEASE_NOTES_TOKEN is not configured."
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
           tag="${{ steps.release.outputs.tag }}"
-          payload="$(jq -n --arg tag "$tag" '{event_type:"komari-web-release-published", client_payload:{tag:$tag}}')"
-          GH_TOKEN="$KOMARI_RELEASE_NOTES_TOKEN" gh api \
-            repos/komari-monitor/komari/dispatches \
+          payload="$(jq -n --arg tag "$tag" '{event_type:"sonar-web-release-published", client_payload:{tag:$tag}}')"
+          GH_TOKEN="$SONAR_RELEASE_NOTES_TOKEN" gh api \
+            repos/sonar-probe/sonar/dispatches \
             --method POST \
             --input - <<< "$payload"
 
           {
             echo
-            echo "Requested Komari release notes refresh for ${tag}."
+            echo "Requested Sonar release notes refresh for ${tag}."
           } >> "$GITHUB_STEP_SUMMARY"
