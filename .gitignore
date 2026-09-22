@@ -30,6 +30,7 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # IDEs and editors
+.claude/
 .idea/
 .vscode/*
 !.vscode/extensions.json
