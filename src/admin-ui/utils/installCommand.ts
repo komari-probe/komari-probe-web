@@ -7,8 +7,6 @@ import {
 export type InstallPlatform = "linux" | "windows" | "macos" | "docker";
 
 export interface AgentInstallOptions {
-  disableWebSsh: boolean;
-  disableAutoUpdate: boolean;
   ignoreUnsafeCert: boolean;
   memoryIncludeCache: boolean;
   getIpAddrFromNic: boolean;
@@ -25,8 +23,6 @@ export interface AgentInstallOptions {
 }
 
 export const emptyAgentInstallOptions = (): AgentInstallOptions => ({
-  disableWebSsh: false,
-  disableAutoUpdate: false,
   ignoreUnsafeCert: false,
   memoryIncludeCache: false,
   getIpAddrFromNic: false,
@@ -71,8 +67,6 @@ export function buildInstallFlagArgs(
   toggles: AgentInstallToggles,
 ): string[] {
   const args: string[] = [];
-  if (options.disableWebSsh) args.push("--disable-web-ssh");
-  if (options.disableAutoUpdate) args.push("--disable-auto-update");
   if (options.ignoreUnsafeCert) args.push("--ignore-unsafe-cert");
   if (options.memoryIncludeCache) args.push("--memory-include-cache");
   if (options.getIpAddrFromNic) args.push("--get-ip-addr-from-nic");

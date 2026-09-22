@@ -105,8 +105,6 @@
       "currencyTips": "¥-人民币，$-美元，€-欧元，£-英镑，₽-卢布，₣-法郎，₹-卢比，₫-越南盾，฿-泰铢",
       "customColumns": "自定义列",
       "deleting": "删除中...",
-      "disableAutoUpdate": "禁用自动更新",
-      "disableWebSsh": "禁用远程控制",
       "dragToReorder": "长按拖拽重新排序",
       "editNodePrice": "编辑账单",
       "emptyGuide": {

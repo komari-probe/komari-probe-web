@@ -360,50 +360,6 @@ const AutoDiscoverySection = ({
           <div className="grid grid-cols-2 gap-2">
             <Flex gap="2" align="center">
               <Checkbox
-                checked={installOptions.disableWebSsh}
-                onCheckedChange={(checked) =>
-                  setInstallOptions((prev) => ({
-                    ...prev,
-                    disableWebSsh: Boolean(checked),
-                  }))
-                }
-              />
-              <label
-                className="text-sm font-normal cursor-pointer"
-                onClick={() =>
-                  setInstallOptions((prev) => ({
-                    ...prev,
-                    disableWebSsh: !prev.disableWebSsh,
-                  }))
-                }
-              >
-                {t("admin.nodeTable.disableWebSsh")}
-              </label>
-            </Flex>
-            <Flex gap="2" align="center">
-              <Checkbox
-                checked={installOptions.disableAutoUpdate}
-                onCheckedChange={(checked) =>
-                  setInstallOptions((prev) => ({
-                    ...prev,
-                    disableAutoUpdate: Boolean(checked),
-                  }))
-                }
-              />
-              <label
-                className="text-sm font-normal cursor-pointer"
-                onClick={() =>
-                  setInstallOptions((prev) => ({
-                    ...prev,
-                    disableAutoUpdate: !prev.disableAutoUpdate,
-                  }))
-                }
-              >
-                {t("admin.nodeTable.disableAutoUpdate", "禁用自动更新")}
-              </label>
-            </Flex>
-            <Flex gap="2" align="center">
-              <Checkbox
                 checked={installOptions.ignoreUnsafeCert}
                 onCheckedChange={(checked) =>
                   setInstallOptions((prev) => ({
@@ -1428,50 +1384,6 @@ function GenerateCommandButton({
               {t("admin.nodeTable.installOptions", "安装选项")}
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={installOptions.disableWebSsh}
-                  onCheckedChange={(checked) => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      disableWebSsh: Boolean(checked),
-                    }));
-                  }}
-                />
-                <label
-                  className="text-sm font-normal"
-                  onClick={() => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      disableWebSsh: !prev.disableWebSsh,
-                    }));
-                  }}
-                >
-                  {t("admin.nodeTable.disableWebSsh")}
-                </label>
-              </Flex>
-              <Flex gap="2" align="center">
-                <Checkbox
-                  checked={installOptions.disableAutoUpdate}
-                  onCheckedChange={(checked) => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      disableAutoUpdate: Boolean(checked),
-                    }));
-                  }}
-                ></Checkbox>
-                <label
-                  className="text-sm font-normal"
-                  onClick={() => {
-                    setInstallOptions((prev) => ({
-                      ...prev,
-                      disableAutoUpdate: !prev.disableAutoUpdate,
-                    }));
-                  }}
-                >
-                  {t("admin.nodeTable.disableAutoUpdate", "禁用自动更新")}
-                </label>
-              </Flex>
               <Flex gap="2" align="center">
                 <Checkbox
                   checked={installOptions.ignoreUnsafeCert}
