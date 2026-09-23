@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="364 398 1320 1320" role="img" aria-label="Sonar">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="294 328 1460 1460" role="img" aria-label="Sonar">
   <style>
     :root {
       color: #5B5BD6;
@@ -24,7 +24,7 @@
     <!-- Pulse traces with bold stroke for crisp rendering on 16x16 tab icons -->
     <path d="M 520 927 H 619 L 653 819 L 701 1014 L 730 927 H 770
              M 1278 927 H 1318 L 1347 1014 L 1395 819 L 1429 927 H 1528"
-          fill="none" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/>
+          fill="none" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
 
     <!-- Center probe head and needle tip -->
     <path fill-rule="evenodd" stroke="none"
